@@ -1,0 +1,2684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C-HAWQ — Organizational Overview & Advisor Briefing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;600;700;800;900&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ===== FLIPBOOK SHELL ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #2c2c2c;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Source Sans 3', sans-serif;
+  user-select: none;
+  overflow: hidden;
+}
+
+/* Toolbar */
+#toolbar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 60px;
+  background: rgba(20,20,20,0.97);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(72,197,227,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  z-index: 1000;
+  padding: 0 20px;
+}
+
+.tb-btn {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: #fff;
+  padding: 7px 16px;
+  border-radius: 7px;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.tb-btn:hover { background: rgba(72,197,227,0.18); border-color: rgba(72,197,227,0.45); }
+.tb-btn:active { transform: scale(0.96); }
+.tb-btn.primary { background: #1f396d; border-color: #2a4a86; }
+
+#slide-counter {
+  font-family: 'Source Code Pro', monospace;
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  min-width: 55px;
+  text-align: center;
+}
+
+#slide-label {
+  font-family: 'Source Code Pro', monospace;
+  font-size: 11px;
+  color: #48c5e3;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* TOC overlay — all selectors prefixed with #toc-overlay to avoid deck CSS conflicts */
+#toc-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(18,18,18,0.97);
+  backdrop-filter: blur(16px);
+  z-index: 2000;
+  display: none;
+  overflow-y: auto;
+  padding: 56px 40px 90px;
+}
+#toc-overlay.open { display: block; }
+
+#toc-overlay h2 {
+  font-family: 'Jost', sans-serif;
+  font-weight: 900;
+  font-size: 26px;
+  color: #fff !important;
+  margin-bottom: 28px;
+  text-align: center;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#toc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Namespaced to avoid conflict with deck .toc-item */
+#toc-overlay .ftoc-item {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 9px !important;
+  padding: 14px 18px !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  color: rgba(255,255,255,0.85) !important;
+  text-decoration: none !important;
+}
+#toc-overlay .ftoc-item:hover {
+  background: rgba(72,197,227,0.12) !important;
+  border-color: rgba(72,197,227,0.35) !important;
+}
+#toc-overlay .ftoc-num {
+  font-family: 'Source Code Pro', monospace !important;
+  font-size: 11px !important;
+  color: #48c5e3 !important;
+  letter-spacing: 0.1em !important;
+  min-width: 26px !important;
+  flex-shrink: 0 !important;
+}
+#toc-overlay .ftoc-name {
+  font-family: 'Source Sans 3', sans-serif !important;
+  font-size: 13px !important;
+  color: rgba(255,255,255,0.82) !important;
+  line-height: 1.3 !important;
+}
+
+/* Stage */
+#stage {
+  width: 100vw;
+  height: calc(100vh - 60px);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#slide-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.slide-frame {
+  position: absolute;
+  width: 1920px;
+  height: 1080px;
+  transform-origin: center center;
+  overflow: hidden;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+}
+
+.slide-frame.entering {
+  animation: slideIn 0.28s ease forwards;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: scale(var(--sf, 1)) translateX(48px); }
+  to   { opacity: 1; transform: scale(var(--sf, 1)) translateX(0); }
+}
+
+/* Progress bar */
+#progress {
+  position: fixed;
+  top: 0; left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #48c5e3, #3f886c);
+  transition: width 0.3s ease;
+  z-index: 999;
+}
+
+#kb-hint {
+  position: fixed;
+  top: 14px; right: 16px;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.22);
+  letter-spacing: 0.08em;
+  z-index: 500;
+  pointer-events: none;
+}
+
+/* ===== DECK CSS ===== */
+:root {
+  /* Brand */
+  --chawq-main-blue: #1f396d;
+  --chawq-main-blue-900: #142749;
+  --chawq-main-blue-800: #1a3160;
+  --chawq-main-blue-600: #2a4a86;
+  --chawq-main-blue-500: #3a5ea0;
+  --chawq-main-blue-300: #7a90bb;
+  --chawq-main-blue-100: #d7dfee;
+  --chawq-main-blue-050: #eef2f9;
+  --chawq-green: #3f886c;
+  --chawq-green-900: #255241;
+  --chawq-green-500: #5ba988;
+  --chawq-green-100: #deece5;
+  --chawq-green-050: #eff6f2;
+  --chawq-sky: #48c5e3;
+  --chawq-sky-900: #1d7c94;
+  --chawq-sky-700: #2aa3c2;
+  --chawq-sky-100: #d0eff7;
+  --chawq-sky-050: #ebf8fc;
+  --chawq-ink: #0e1a33;
+  --chawq-fg-1: #152545;
+  --chawq-fg-2: #3c4a66;
+  --chawq-fg-3: #65728c;
+  --chawq-fg-muted: #8a94a9;
+  --chawq-line: #d9dde6;
+  --chawq-line-soft: #e8ebf1;
+  --chawq-surface-1: #f7f8fb;
+  --chawq-surface-2: #f2f4f8;
+  --chawq-paper: #ffffff;
+  --chawq-on-blue-1: #ffffff;
+  --chawq-on-blue-2: #d7dfee;
+  --chawq-on-blue-3: #9aaacb;
+  --chawq-danger: #b4331f;
+  --chawq-success: #3f886c;
+  --chawq-info: #1d7c94;
+
+  --font-display: 'Jost', 'Futura PT', 'Century Gothic', sans-serif;
+  --font-body: 'Source Sans 3', 'Source Sans Pro', system-ui, sans-serif;
+  --font-mono: 'Source Code Pro', 'Roboto Mono', monospace;
+
+  /* Deck-specific type scale (1920x1080) */
+  --type-display: 140px;
+  --type-hero: 200px;
+  --type-title: 64px;
+  --type-subtitle: 44px;
+  --type-h3: 34px;
+  --type-lead: 30px;
+  --type-body: 26px;
+  --type-small: 22px;
+  --type-eyebrow: 20px;
+  --type-mono: 22px;
+  --type-table: 22px;
+
+  --pad-x: 110px;
+  --pad-top: 90px;
+  --pad-bottom: 80px;
+  --gap-title: 44px;
+  --gap-item: 24px;
+}
+
+/* deck-stage takes care of sizing */
+deck-stage > section {
+  font-family: var(--font-body);
+  font-size: var(--type-body);
+  line-height: 1.45;
+  color: var(--chawq-fg-1);
+  background: var(--chawq-paper);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* ---- Common slide frame ---- */
+.slide {
+  width: 100%;
+  height: 100%;
+  padding: var(--pad-top) var(--pad-x) var(--pad-bottom);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.slide.blue { background: var(--chawq-main-blue); color: var(--chawq-on-blue-1); }
+.slide.surface { background: var(--chawq-surface-1); }
+.slide.green { background: var(--chawq-green); color: #fff; }
+
+/* Chrome: logo bottom-right, page label bottom-left */
+.chrome-logo {
+  position: absolute;
+  bottom: 40px;
+  right: 56px;
+  width: 56px;
+  height: 56px;
+  opacity: 0.9;
+}
+.chrome-logo img { width: 100%; height: 100%; object-fit: contain; }
+.chrome-page {
+  position: absolute;
+  bottom: 48px;
+  left: 56px;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  letter-spacing: 0.1em;
+  color: var(--chawq-fg-3);
+  text-transform: uppercase;
+}
+.slide.blue .chrome-page { color: var(--chawq-on-blue-3); }
+.slide.green .chrome-page { color: rgba(255,255,255,0.7); }
+
+/* Section marker (big section pill for navigation) */
+.section-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  margin: 0 0 32px;
+  padding: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chawq-fg-2);
+}
+.section-mark .num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--chawq-main-blue);
+  color: #fff;
+  min-width: 76px;
+  height: 56px;
+  padding: 0 20px;
+  border-radius: 10px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 32px;
+  letter-spacing: 0;
+}
+.section-mark .title-text { color: var(--chawq-main-blue); font-weight: 700; }
+.slide.blue .section-mark { color: var(--chawq-on-blue-2); }
+.slide.blue .section-mark .num { background: var(--chawq-sky); color: var(--chawq-main-blue-900); }
+.slide.blue .section-mark .title-text { color: #fff; }
+
+/* Eyebrow above titles */
+.eyebrow {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--type-eyebrow);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--chawq-sky-900);
+  margin: 0 0 18px;
+}
+.slide.blue .eyebrow { color: var(--chawq-sky); }
+.slide.green .eyebrow { color: rgba(255,255,255,0.85); }
+
+/* Headings */
+h1.slide-title, h2.slide-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--type-title);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--chawq-main-blue);
+  margin: 0 0 var(--gap-title);
+  text-wrap: balance;
+}
+.slide.blue h1.slide-title, .slide.blue h2.slide-title { color: #fff; }
+.slide.green h1.slide-title, .slide.green h2.slide-title { color: #fff; }
+
+h3.subtitle {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--type-subtitle);
+  line-height: 1.1;
+  color: var(--chawq-main-blue);
+  margin: 0 0 24px;
+}
+.slide.blue h3.subtitle { color: #fff; }
+
+/* Body text */
+.body p { margin: 0 0 18px; font-size: var(--type-body); line-height: 1.5; color: var(--chawq-fg-1); }
+.body p.lead { font-size: var(--type-lead); color: var(--chawq-fg-1); line-height: 1.4; }
+.slide.blue .body p, .slide.blue .body p.lead { color: var(--chawq-on-blue-2); }
+.slide.blue .body strong { color: #fff; }
+
+ul.clean { list-style: none; padding: 0; margin: 0; }
+ul.clean li { margin: 0 0 14px; font-size: var(--type-body); line-height: 1.5; }
+ul.dot { padding-left: 0; list-style: none; }
+ul.dot li { position: relative; padding-left: 32px; margin: 0 0 14px; }
+ul.dot li::before { content: ""; position: absolute; left: 0; top: 14px; width: 10px; height: 10px; background: var(--chawq-sky); border-radius: 50%; }
+
+/* ---- Cover ---- */
+.cover {
+  background: var(--chawq-main-blue);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+.cover .cover-photo {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  opacity: 0.35;
+}
+.cover .cover-gradient {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(20,39,73,0.55) 0%, rgba(20,39,73,0.85) 60%, var(--chawq-main-blue-900) 100%);
+}
+.cover .cover-inner {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; justify-content: space-between;
+  height: 100%; padding: 90px 110px 90px;
+}
+.cover .cover-logo { width: 110px; height: 110px; }
+.cover h1.title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 104px;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: #fff;
+  margin: 0 0 18px;
+}
+.cover .sub { font-family: var(--font-display); font-weight: 700; font-size: 56px; color: var(--chawq-sky); letter-spacing: -0.01em; margin: 0 0 36px; }
+.cover .acronym {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 170px;
+  letter-spacing: -0.04em;
+  color: #fff;
+  line-height: 0.9;
+  margin: 0 0 28px;
+}
+.cover .meta { font-family: var(--font-mono); font-size: 22px; color: var(--chawq-on-blue-3); letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* ---- Big stat grid ---- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 48px;
+  width: 100%;
+}
+.stat .num {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 130px;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--chawq-sky);
+  margin: 0 0 12px;
+  font-variant-numeric: tabular-nums;
+}
+.slide.blue .stat .num { color: var(--chawq-sky); }
+.slide:not(.blue) .stat .num { color: var(--chawq-main-blue); }
+.stat .lbl {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 24px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.85);
+  line-height: 1.2;
+}
+.slide:not(.blue) .stat .lbl { color: var(--chawq-fg-2); }
+.stat { border-top: 3px solid currentColor; padding-top: 28px; color: var(--chawq-sky); }
+.slide:not(.blue) .stat { color: var(--chawq-main-blue); }
+
+/* ---- TOC ---- */
+.toc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 100px;
+  row-gap: 4px;
+  margin-top: 8px;
+}
+.toc-item {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  align-items: baseline;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--chawq-line);
+}
+.toc-item .n {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--chawq-sky-900);
+  letter-spacing: 0.05em;
+}
+.toc-item .ttl {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 28px;
+  color: var(--chawq-main-blue);
+}
+
+/* ---- Section divider ---- */
+.section-divider .sec-num {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  letter-spacing: 0.12em;
+  color: var(--chawq-sky);
+  margin: 0 0 24px;
+}
+.section-divider h1 {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 140px;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: #fff;
+  margin: 0;
+  text-wrap: balance;
+  max-width: 1500px;
+}
+.section-divider .sub {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 36px;
+  color: var(--chawq-on-blue-2);
+  margin: 32px 0 0;
+  max-width: 1100px;
+}
+
+/* ---- 2 column ---- */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; flex: 1; align-content: start; }
+.two-col-wide { display: grid; grid-template-columns: 1fr 1.4fr; gap: 80px; flex: 1; align-content: start; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 48px; flex: 1; align-content: start; }
+.four-col { display: grid; grid-template-columns: repeat(4, 1fr); gap: 36px; flex: 1; align-content: start; }
+
+/* ---- Numbered cards ---- */
+.num-card {
+  background: var(--chawq-surface-1);
+  border-radius: 14px;
+  padding: 32px;
+  border-top: 3px solid var(--chawq-sky);
+  display: flex; flex-direction: column;
+  height: 100%;
+}
+.num-card .n {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 56px;
+  color: var(--chawq-sky-900);
+  line-height: 1;
+  margin: 0 0 16px;
+}
+.num-card h4 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--chawq-main-blue);
+  margin: 0 0 14px;
+  line-height: 1.15;
+}
+.num-card p {
+  font-size: 22px;
+  line-height: 1.4;
+  color: var(--chawq-fg-2);
+  margin: 0;
+}
+.slide.blue .num-card {
+  background: rgba(255,255,255,0.06);
+  border-top-color: var(--chawq-sky);
+  backdrop-filter: blur(4px);
+}
+.slide.blue .num-card h4 { color: #fff; }
+.slide.blue .num-card p { color: var(--chawq-on-blue-2); }
+.slide.blue .num-card .n { color: var(--chawq-sky); }
+
+/* ---- Pillar full slide ---- */
+.pillar-hero {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 60px;
+  align-items: start;
+}
+.pillar-hero .pn {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 240px;
+  line-height: 0.85;
+  color: var(--chawq-sky);
+  letter-spacing: -0.04em;
+}
+.pillar-hero h2 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 72px;
+  color: var(--chawq-main-blue);
+  margin: 0 0 32px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.pillar-hero .sub-line {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 30px;
+  color: var(--chawq-sky-900);
+  margin: 0 0 28px;
+}
+.pillar-hero p {
+  font-size: 24px;
+  line-height: 1.5;
+  color: var(--chawq-fg-1);
+  margin: 0 0 16px;
+}
+
+/* ---- Tables ---- */
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--type-table);
+}
+table.data-table th {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 16px;
+  color: var(--chawq-fg-3);
+  text-align: left;
+  padding: 14px 16px;
+  border-bottom: 2px solid var(--chawq-main-blue);
+  white-space: nowrap;
+}
+table.data-table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--chawq-line);
+  color: var(--chawq-fg-1);
+  vertical-align: top;
+  line-height: 1.35;
+}
+table.data-table td.muni { font-weight: 600; color: var(--chawq-main-blue); }
+table.data-table td.mono { font-family: var(--font-mono); font-size: 18px; }
+table.data-table td.num { font-family: var(--font-mono); text-align: right; font-variant-numeric: tabular-nums; }
+table.data-table tr.subhead td {
+  background: var(--chawq-main-blue-050);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chawq-main-blue);
+  padding: 10px 16px;
+}
+
+/* ---- Team grid ---- */
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+  align-content: start;
+}
+.team-grid.tg4 { grid-template-columns: repeat(4, 1fr); gap: 28px; }
+.team-card {
+  background: #fff;
+  border: 1px solid var(--chawq-line);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.team-card .photo {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--chawq-surface-2);
+  background-size: cover;
+  background-position: center 30%;
+}
+.team-card .info {
+  padding: 22px 24px 24px;
+}
+.team-card .name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 26px;
+  color: var(--chawq-main-blue);
+  margin: 0 0 6px;
+  line-height: 1.1;
+}
+.team-card .role {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--chawq-sky-900);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 14px;
+}
+.team-card .bio {
+  font-size: 17px;
+  line-height: 1.45;
+  color: var(--chawq-fg-2);
+  margin: 0;
+}
+.team-grid.tg4 .team-card .name { font-size: 22px; }
+.team-grid.tg4 .team-card .role { font-size: 15px; margin-bottom: 10px; }
+.team-grid.tg4 .team-card .bio { font-size: 15px; }
+.team-grid.tg4 .team-card .info { padding: 18px 20px 20px; }
+
+/* ---- Advisor grid (smaller, denser) ---- */
+.advisor-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+  align-content: start;
+}
+.advisor-card {
+  display: flex; flex-direction: column;
+  gap: 16px;
+}
+.advisor-card .photo {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  background-size: cover; background-position: center;
+  background-color: var(--chawq-surface-2);
+}
+.advisor-card .name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--chawq-main-blue);
+  line-height: 1.1;
+  margin: 0;
+}
+.advisor-card .aff {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--chawq-sky-900);
+  margin: 4px 0 8px;
+  line-height: 1.25;
+}
+.advisor-card .bio {
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--chawq-fg-2);
+  margin: 0;
+}
+
+/* ---- Process steps ---- */
+.process-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 22px;
+}
+.process-table th {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 15px;
+  color: var(--chawq-fg-3);
+  text-align: left;
+  padding: 12px 18px;
+  border-bottom: 2px solid var(--chawq-main-blue);
+}
+.process-table td { padding: 18px; border-bottom: 1px solid var(--chawq-line); vertical-align: top; line-height: 1.35; }
+.process-table .step-n {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 36px;
+  color: var(--chawq-sky-900);
+  line-height: 1;
+  width: 60px;
+}
+.process-table .step-time {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  color: var(--chawq-fg-2);
+  white-space: nowrap;
+  width: 130px;
+}
+.process-table .step-phase {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--chawq-main-blue);
+  width: 320px;
+}
+.process-table .step-desc {
+  font-size: 19px;
+  color: var(--chawq-fg-2);
+  line-height: 1.4;
+}
+
+/* ---- Timeline ---- */
+.timeline {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 36px;
+  margin-top: 30px;
+}
+.tl-item { position: relative; padding-top: 38px; }
+.tl-item::before {
+  content: "";
+  position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+  background: var(--chawq-sky);
+}
+.tl-item::after {
+  content: "";
+  position: absolute; top: -7px; left: 0; width: 16px; height: 16px;
+  background: var(--chawq-sky); border-radius: 50%;
+}
+.tl-date {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  color: var(--chawq-sky-900);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+}
+.tl-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--chawq-main-blue);
+  margin: 0 0 12px;
+  line-height: 1.15;
+}
+.tl-body { font-size: 17px; line-height: 1.4; color: var(--chawq-fg-2); margin: 0; }
+
+/* ---- Image-bg slide ---- */
+.image-bg {
+  background-size: cover;
+  background-position: center;
+  color: #fff;
+  position: relative;
+}
+.image-bg::before {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(20,39,73,0.85) 0%, rgba(20,39,73,0.55) 100%);
+}
+.image-bg > * { position: relative; z-index: 1; }
+.image-bg > .chrome-page,
+.image-bg > .chrome-logo { position: absolute; z-index: 2; }
+.image-bg .body p, .image-bg .slide-title { color: #fff; }
+
+/* ---- Quote slide ---- */
+.quote-block {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 64px;
+  line-height: 1.15;
+  color: var(--chawq-main-blue);
+  border-left: 6px solid var(--chawq-sky);
+  padding-left: 48px;
+  max-width: 1500px;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.slide.blue .quote-block { color: #fff; border-left-color: var(--chawq-sky); }
+.quote-attr { font-family: var(--font-body); font-weight: 600; font-size: 24px; color: var(--chawq-fg-3); margin-top: 40px; text-transform: uppercase; letter-spacing: 0.1em; padding-left: 54px; }
+.slide.blue .quote-attr { color: var(--chawq-on-blue-3); }
+
+/* ---- Values grid ---- */
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 28px;
+  margin-top: 30px;
+}
+.value-card {
+  border-top: 3px solid var(--chawq-sky);
+  padding: 28px 0 0;
+}
+.value-card .n {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  color: var(--chawq-sky-900);
+  letter-spacing: 0.1em;
+  margin: 0 0 16px;
+}
+.value-card .v {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 26px;
+  color: var(--chawq-main-blue);
+  line-height: 1.2;
+  margin: 0 0 14px;
+}
+.value-card p {
+  font-size: 18px;
+  line-height: 1.45;
+  color: var(--chawq-fg-2);
+  margin: 0;
+}
+
+/* ---- Letter style ---- */
+.letter-body {
+  max-width: 1300px;
+  font-family: var(--font-body);
+  font-size: var(--type-body);
+  line-height: 1.55;
+  color: var(--chawq-fg-1);
+}
+.letter-body p { margin: 0 0 22px; }
+.letter-sig {
+  margin-top: 36px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 30px;
+  color: var(--chawq-main-blue);
+  line-height: 1.2;
+}
+.letter-sig .role { font-size: 20px; color: var(--chawq-fg-3); font-weight: 500; text-transform: none; letter-spacing: 0; margin-top: 6px; display: block; }
+
+/* ---- Big number with caption row (executive summary style) ---- */
+.callout-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+  align-items: end;
+  margin-top: auto;
+  padding-top: 40px;
+  border-top: 1px solid var(--chawq-line);
+}
+.slide.blue .callout-row { border-top-color: rgba(255,255,255,0.2); }
+.callout {
+  display: flex; flex-direction: column;
+}
+.callout .v {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 88px;
+  color: var(--chawq-main-blue);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin: 0 0 12px;
+}
+.slide.blue .callout .v { color: var(--chawq-sky); }
+.callout .l {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--chawq-fg-3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  line-height: 1.25;
+}
+.slide.blue .callout .l { color: var(--chawq-on-blue-2); }
+
+/* ---- Theory of Change flow ---- */
+.toc-flow {
+  display: grid;
+  grid-template-columns: 1fr 60px 1fr 60px 1fr;
+  gap: 24px;
+  align-items: stretch;
+  margin-top: 32px;
+}
+.toc-flow .arrow {
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 700; font-size: 44px;
+  color: var(--chawq-sky);
+}
+.toc-step {
+  background: var(--chawq-surface-1);
+  border-radius: 14px;
+  padding: 28px;
+  border-top: 4px solid var(--chawq-sky);
+}
+.toc-step .h {
+  font-family: var(--font-display); font-weight: 700; font-size: 20px;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--chawq-sky-900); margin: 0 0 14px;
+}
+.toc-step .v {
+  font-family: var(--font-display); font-weight: 800; font-size: 28px;
+  color: var(--chawq-main-blue); margin: 0 0 14px; line-height: 1.1;
+}
+.toc-step p { font-size: 18px; line-height: 1.4; color: var(--chawq-fg-2); margin: 0; }
+
+/* ---- Compliance list ---- */
+.compliance-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 60px;
+  margin-top: 24px;
+}
+.compliance-item {
+  font-size: 19px;
+  line-height: 1.4;
+  color: var(--chawq-fg-1);
+  padding: 12px 0 12px 32px;
+  border-bottom: 1px solid var(--chawq-line-soft);
+  position: relative;
+}
+.compliance-item::before {
+  content: "✓";
+  position: absolute; left: 0; top: 12px;
+  color: var(--chawq-green);
+  font-weight: 700;
+  font-size: 22px;
+}
+.compliance-item strong { color: var(--chawq-main-blue); font-weight: 700; }
+
+/* ---- Badge / status pill ---- */
+.badge-501 {
+  display: inline-flex; align-items: center; gap: 14px;
+  background: var(--chawq-green);
+  color: #fff;
+  padding: 16px 28px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 0.04em;
+}
+.badge-501 .check {
+  width: 32px; height: 32px;
+  background: #fff; color: var(--chawq-green);
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 20px;
+}
+.badge-mono {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  color: var(--chawq-on-blue-3);
+  text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,0.25);
+  padding: 8px 16px;
+  border-radius: 4px;
+}
+
+/* ---- Expense breakdown bar ---- */
+.expense-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 100px 2fr;
+  gap: 24px;
+  align-items: center;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--chawq-line);
+  font-size: 22px;
+}
+.expense-row .cat { font-family: var(--font-display); font-weight: 600; color: var(--chawq-main-blue); }
+.expense-row .amt { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--chawq-fg-1); }
+.expense-row .pct { font-family: var(--font-mono); color: var(--chawq-fg-3); }
+.expense-row .bar { height: 14px; background: var(--chawq-main-blue-050); border-radius: 7px; overflow: hidden; }
+.expense-row .bar > span { display: block; height: 100%; background: var(--chawq-main-blue); border-radius: 7px; }
+.expense-row.row-2 .bar > span { background: var(--chawq-green); }
+.expense-row.row-3 .bar > span { background: var(--chawq-sky-700); }
+.expense-row.row-4 .bar > span { background: var(--chawq-main-blue-500); }
+.expense-row.row-5 .bar > span { background: var(--chawq-green-500); }
+.expense-row.row-6 .bar > span { background: var(--chawq-main-blue-300); }
+
+/* ---- Pillar mini cards (section 07) ---- */
+.pillar-mini {
+  background: var(--chawq-surface-1);
+  border-radius: 14px;
+  padding: 36px 32px;
+  display: flex; flex-direction: column;
+  height: 100%;
+  border-top: 4px solid var(--chawq-sky);
+}
+.pillar-mini .n {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  color: var(--chawq-sky-900);
+  letter-spacing: 0.1em;
+  margin: 0 0 10px;
+}
+.pillar-mini h4 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 30px;
+  color: var(--chawq-main-blue);
+  margin: 0 0 18px;
+  line-height: 1.1;
+}
+.pillar-mini p {
+  font-size: 19px;
+  line-height: 1.45;
+  color: var(--chawq-fg-2);
+  margin: 0 0 14px;
+}
+
+/* ---- Closing ---- */
+.closing-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; gap: 36px; }
+.closing-content h1 {
+  font-family: var(--font-display); font-weight: 900; font-size: 110px; color: #fff;
+  line-height: 1; margin: 0; letter-spacing: -0.02em;
+}
+.closing-content .sub { font-family: var(--font-display); font-size: 32px; color: var(--chawq-sky); font-weight: 500; }
+.closing-content .contact-line { font-family: var(--font-mono); font-size: 22px; color: var(--chawq-on-blue-2); letter-spacing: 0.08em; }
+</style>
+<style>
+  body { margin: 0; background: #0e1a33; }
+  /* designer asset placeholder */
+  .ph {
+    border: 3px dashed var(--chawq-sky-700);
+    background: var(--chawq-sky-050);
+    border-radius: 14px;
+    display: flex; align-items: center; gap: 22px;
+    padding: 22px 30px;
+  }
+  .ph .tag {
+    font-family: var(--font-mono); font-weight: 700; font-size: 15px;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--chawq-sky-900);
+    white-space: nowrap;
+  }
+  .ph .txt { font-size: 21px; line-height: 1.4; color: var(--chawq-main-blue); font-weight: 600; }
+  .ph-box {
+    border: 3px dashed var(--chawq-sky-700);
+    background: var(--chawq-sky-050);
+    border-radius: 14px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: 10px; color: var(--chawq-sky-900);
+  }
+  .ph-box .tag { font-family: var(--font-mono); font-weight: 700; font-size: 14px; letter-spacing: 0.14em; text-transform: uppercase; }
+  .ph-box .txt { font-family: var(--font-display); font-weight: 600; font-size: 19px; color: var(--chawq-main-blue); line-height: 1.25; }
+
+/* Overrides for flipbook context */
+deck-stage > section,
+section[data-screen-label] {
+  width: 1920px !important;
+  height: 1080px !important;
+  position: absolute !important;
+  top: 0 !important; left: 0 !important;
+  overflow: hidden !important;
+}
+
+.chrome-logo {
+  width: 52px !important;
+  height: 52px !important;
+  bottom: 36px !important;
+  right: 52px !important;
+  object-fit: contain !important;
+  display: block !important;
+}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<div id="kb-hint">← → navigate &nbsp;·&nbsp; T contents &nbsp;·&nbsp; F fullscreen</div>
+
+<div id="stage">
+  <div id="slide-wrapper">
+    <div class="slide-frame" id="current-frame"></div>
+  </div>
+</div>
+
+<div id="toolbar">
+  <button class="tb-btn" onclick="prevSlide()">← Prev</button>
+  <span id="slide-counter">1 / 40</span>
+  <button class="tb-btn" onclick="nextSlide()">Next →</button>
+  <span id="slide-label"></span>
+  <button class="tb-btn primary" onclick="toggleToc()">☰ Contents</button>
+  <button class="tb-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+</div>
+
+<div id="toc-overlay">
+  <h2>C-HAWQ Advisor Briefing</h2>
+  <div id="toc-grid"></div>
+</div>
+
+<script>
+const SECTIONS_RAW = `<section data-screen-label="01 Cover">
+  <div class="slide cover">
+    <div class="cover-photo" style="background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%)"></div>
+    <div class="cover-gradient"></div>
+    <div class="cover-inner">
+      <div style="display:flex; align-items:center; gap:28px;">
+        <img class="cover-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="C-HAWQ" style="filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));">
+        <div style="font-family: var(--font-mono); font-size: 22px; color: var(--chawq-sky); letter-spacing: 0.12em; text-transform: uppercase;">Coastal Habitat & Water Quality Initiative</div>
+      </div>
+
+      <div>
+        <div class="acronym">C–HAWQ</div>
+        <h1 class="title">Coastal Habitat<br>and Water Quality<br>Initiative</h1>
+        <div style="font-family: var(--font-display); font-weight: 600; font-size: 38px; color: var(--chawq-sky); margin: 24px 0 0; letter-spacing: -0.005em;">Organizational Overview & Advisor Briefing</div>
+      </div>
+
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+          <div class="meta">May 2026</div>
+          <div class="meta">501(c)(3) Public Charity &nbsp;·&nbsp; Reg. #CH83290</div>
+        </div>
+        <div style="margin-top: 24px; padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.18); font-family: var(--font-body); font-size: 18px; color: var(--chawq-on-blue-3); line-height: 1.5; max-width: 1100px;">
+          This document contains confidential information and is intended for the named recipient. Please review the accompanying C-HAWQ Confidentiality Understanding Agreement.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     TABLE OF CONTENTS
+============================================================ -->
+<section data-screen-label="02 Table of Contents">
+  <div class="slide">
+    <div class="eyebrow">Contents</div>
+    <h2 class="slide-title">In this briefing</h2>
+
+    <div class="toc-grid">
+      <div class="toc-item"><span class="n">01</span><span class="ttl">Letter of Appreciation</span></div>
+      <div class="toc-item"><span class="n">10</span><span class="ttl">Meet the Team</span></div>
+      <div class="toc-item"><span class="n">02</span><span class="ttl">Mission, Vision & Values</span></div>
+      <div class="toc-item"><span class="n">11</span><span class="ttl">Governance & Compliance</span></div>
+      <div class="toc-item"><span class="n">03</span><span class="ttl">Our Story: The Unbroken</span></div>
+      <div class="toc-item"><span class="n">12</span><span class="ttl">Scientific Advisors & Partners</span></div>
+      <div class="toc-item"><span class="n">04</span><span class="ttl">Who We Are & What We Do</span></div>
+      <div class="toc-item"><span class="n">13</span><span class="ttl">Nature-Based Solutions We Champion</span></div>
+      <div class="toc-item"><span class="n">05</span><span class="ttl">Our Four Pillars</span></div>
+      <div class="toc-item"><span class="n">14</span><span class="ttl">Conferences & Field Presence</span></div>
+      <div class="toc-item"><span class="n">06</span><span class="ttl">The Proven Process</span></div>
+      <div class="toc-item"><span class="n">15</span><span class="ttl">Our Latest Research</span></div>
+      <div class="toc-item"><span class="n">07</span><span class="ttl">Our Evolution: From Idea to Impact</span></div>
+      <div class="toc-item"><span class="n">16</span><span class="ttl">Artificial Intelligence at C-HAWQ</span></div>
+      <div class="toc-item"><span class="n">08</span><span class="ttl">Project Pipeline</span></div>
+      <div class="toc-item"><span class="n">17</span><span class="ttl">Financials</span></div>
+      <div class="toc-item"><span class="n">09</span><span class="ttl">Traction & Operating System</span></div>
+      <div class="toc-item"><span class="n">18</span><span class="ttl">Ways to Support C-HAWQ</span></div>
+    </div>
+    <div class="chrome-page">Contents</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     01 — LETTER OF APPRECIATION
+============================================================ -->
+<section data-screen-label="03 Letter of Appreciation">
+  <div class="slide">
+    <div class="section-mark"><span class="num">01</span><span class="title-text">Letter of Appreciation</span></div>
+    <h2 class="slide-title" style="margin-bottom: 32px;">Dear Advisors and Donors,</h2>
+
+    <div class="two-col-wide" style="gap: 60px; align-items: start;">
+      <div class="letter-body" style="font-size: 22px;">
+        <p>On behalf of the entire C-HAWQ team, I want to express our sincere gratitude for your early belief in this mission. You chose to invest before the proof points existed — before the research was published, before the conference booth was built, before the 501(c)(3) was official. <strong>That kind of trust is rare, and it matters more than we can adequately express.</strong></p>
+        <p>What you will find in these pages is the story of what your support has made possible. From a concept born on Marco Island to a fully operational nonprofit with active projects, a growing team, university partnerships, and a presence on the state's most important environmental stages — <strong>C-HAWQ is moving.</strong></p>
+        <p>We are still early. The work ahead is significant. And we would be honored to have you continue as a partner in it. <strong>Every dollar goes directly to the work:</strong> the science, the exploration funds, and the community engagement that no one else is doing.</p>
+        <p>Contributions to C-HAWQ are fully tax-deductible under our 501(c)(3) status. To donate online, visit <strong>CHAWQ.org/donate</strong>.</p>
+        <p style="margin-top: 28px;">With deep appreciation,</p>
+        <div class="letter-sig" style="margin-top: 14px;">
+          Emily Begin
+          <span class="role">Vice Executive Director & Treasurer<br>Coastal Habitat and Water Quality Initiative</span>
+        </div>
+      </div>
+      <div>
+        <div style="background: var(--chawq-surface-1); border-left: 4px solid var(--chawq-sky); padding: 28px 32px; border-radius: 0 14px 14px 0;">
+          <div style="font-family: var(--font-mono); font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--chawq-sky-900); margin-bottom: 14px;">In these pages</div>
+          <ul class="dot" style="font-size: 20px;">
+            <li>A concept born on Marco Island</li>
+            <li>A fully operational nonprofit with active projects</li>
+            <li>A growing team and university partnerships</li>
+            <li>Florida's most important environmental stages</li>
+          </ul>
+        </div>
+        <div style="margin-top: 22px; background: var(--chawq-main-blue); color: #fff; padding: 22px 28px; border-radius: 14px;">
+          <div style="font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--chawq-sky); margin-bottom: 8px;">Tax-Deductible</div>
+          <div style="font-family: var(--font-display); font-weight: 700; font-size: 22px; line-height: 1.2;">501(c)(3) Public Charity</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chrome-page">01 · Letter</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     02 — MISSION + STATS
+============================================================ -->
+<section data-screen-label="04 Mission">
+  <div class="slide blue">
+    <div class="section-mark"><span class="num">02</span><span class="title-text">Mission, Vision & Values</span></div>
+    <h2 class="slide-title" style="max-width: 1400px;">Our Mission</h2>
+    <div style="max-width: 1600px;">
+      <p style="font-family: var(--font-display); font-weight: 600; font-size: 42px; line-height: 1.25; color: #fff; margin: 0; letter-spacing: -0.005em;">
+        Empower the Municipal Champion — City Managers, Public Works Directors, or elected officials — who have the vision to fix their waterways but lack the research or resources to get started. With them, build the playbook of how we solve these problems for Florida.
+      </p>
+    </div>
+
+    <div class="callout-row" style="margin-top: auto;">
+      <div class="callout"><div class="v">$200K</div><div class="l">Exploration Funds<br>per Project</div></div>
+      <div class="callout"><div class="v">6</div><div class="l">PhD<br>Advisors</div></div>
+      <div class="callout"><div class="v">$1B</div><div class="l">10-Year<br>Impact Target</div></div>
+      <div class="callout"><div class="v">0%</div><div class="l">Profit<br>Motive</div></div>
+    </div>
+    <div class="chrome-page">02 · Mission</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     02 — VISION + CORE VALUES
+============================================================ -->
+<section data-screen-label="05 Vision and Core Values">
+  <div class="slide">
+    <div class="eyebrow">02 — Mission, Vision & Values</div>
+    <h2 class="slide-title">Our Vision & Core Values</h2>
+
+    <div style="background: var(--chawq-sky-050); border-left: 6px solid var(--chawq-sky); padding: 32px 44px; border-radius: 0 14px 14px 0; margin-bottom: 40px; display: flex; align-items: center; gap: 28px;">
+      <div style="font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--chawq-sky-900); white-space: nowrap;">Our Vision</div>
+      <div style="font-family: var(--font-display); font-weight: 600; font-size: 32px; line-height: 1.25; color: var(--chawq-main-blue);">
+        A $1 billion impact on Florida's habitat and water quality — and the documentary to tell the story.
+      </div>
+    </div>
+
+    <div style="font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--chawq-sky-900); margin-bottom: 16px;">Our Core Values</div>
+
+    <table style="width: 100%; border-collapse: separate; border-spacing: 0; border-radius: 14px; overflow: hidden;">
+      <tbody>
+        <tr style="background: var(--chawq-main-blue); color: #fff;">
+          <td style="width: 84px; font-family: var(--font-display); font-weight: 800; font-size: 30px; color: var(--chawq-sky); padding: 22px 28px; vertical-align: top; text-align: center; line-height: 1;">01</td>
+          <td style="padding: 22px 28px; font-size: 24px; line-height: 1.4; color: #fff;">We are relentlessly helpful. We ask for help and offer help quickly. We make municipalities the hero and provide only white glove service.</td>
+        </tr>
+        <tr style="background: var(--chawq-surface-1);">
+          <td style="width: 84px; font-family: var(--font-display); font-weight: 800; font-size: 30px; color: var(--chawq-sky-900); padding: 22px 28px; vertical-align: top; text-align: center; line-height: 1;">02</td>
+          <td style="padding: 22px 28px; font-size: 24px; line-height: 1.4; color: var(--chawq-fg-1);">Compounding cool.</td>
+        </tr>
+        <tr style="background: var(--chawq-main-blue); color: #fff;">
+          <td style="width: 84px; font-family: var(--font-display); font-weight: 800; font-size: 30px; color: var(--chawq-sky); padding: 22px 28px; vertical-align: top; text-align: center; line-height: 1;">03</td>
+          <td style="padding: 22px 28px; font-size: 24px; line-height: 1.4; color: #fff;">We will become a thought leader in our space.</td>
+        </tr>
+        <tr style="background: var(--chawq-surface-1);">
+          <td style="width: 84px; font-family: var(--font-display); font-weight: 800; font-size: 30px; color: var(--chawq-sky-900); padding: 22px 28px; vertical-align: top; text-align: center; line-height: 1;">04</td>
+          <td style="padding: 22px 28px; font-size: 24px; line-height: 1.4; color: var(--chawq-fg-1);">We walk our talk.</td>
+        </tr>
+        <tr style="background: var(--chawq-main-blue); color: #fff;">
+          <td style="width: 84px; font-family: var(--font-display); font-weight: 800; font-size: 30px; color: var(--chawq-sky); padding: 22px 28px; vertical-align: top; text-align: center; line-height: 1;">05</td>
+          <td style="padding: 22px 28px; font-size: 24px; line-height: 1.4; color: #fff;">Don't be a dick.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="chrome-page">02 · Values</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     03 — STORY DIVIDER
+============================================================ -->
+<section data-screen-label="06 Our Story divider">
+  <div class="slide image-bg section-divider" style="background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%); background-size: cover; background-position: right center;">
+    <div style="position: relative; z-index: 1; max-width: 1500px;">
+      <div class="sec-num">03 — Our Story</div>
+      <h1>The Unbroken</h1>
+      <div class="sub">C-HAWQ was not built in a boardroom. It was forged from a real failure, a hard lesson, and an unwavering conviction that Florida's waterways deserve better.</div>
+    </div>
+    <div class="chrome-page">03 · Story</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     03 — THE PLACE
+============================================================ -->
+<section data-screen-label="07 The Place">
+  <div class="slide">
+    <div class="eyebrow">03 — Our Story · The Unbroken</div>
+    <h2 class="slide-title" style="margin-bottom: 32px;">I.&nbsp;&nbsp;The Place</h2>
+
+    <div style="columns: 2; column-gap: 72px; max-width: 1680px;">
+        <p style="font-size: 26px; line-height: 1.6; color: var(--chawq-fg-1); margin: 0 0 22px; break-inside: avoid;">We feel lucky to call Marco Island home. What makes this place so special is the way we get to interact with the environment every single day — out on the boat, fishing off the dock, walking the beach at low tide. Our lives are lived on the water. That relationship was passed down to us, and we never took it for granted.</p>
+        <p style="font-size: 26px; line-height: 1.6; color: var(--chawq-fg-1); margin: 0 0 22px; break-inside: avoid;">Slowly, then all at once, something changed. The water got darker. The fish thinned out. Neighbors started having the same conversation: something is wrong, and nobody seems to know what to do about it. For a long time, that felt like a local frustration. The more we looked, the more we understood it wasn't. The same decline was playing out up and down the Florida coast. A water quality crisis had been building for decades, and the path forward for most communities was nowhere in sight.</p>
+        <p style="font-size: 26px; line-height: 1.6; color: var(--chawq-fg-1); margin: 0 0 22px; break-inside: avoid;">In 2021, that hunch became data. Environmental Research Design formally classified Marco Island's waterways as impaired. The cause: 70% of the pollutant load was coming from internal sediment recycling — the muck layered on the canal floors, slowly releasing nitrogen back into the water column. The recommended fix was hydraulic dredging. The estimated cost was $189 million. The city dismissed the idea before the conversation could start. At that price tag, it had to. The community was left to focus on the 30% of surface issues they could afford to touch, while the root cause continued its quiet work below.</p>
+    </div>
+    <div class="chrome-page">03 · The Place</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     03 — THE DIVE
+============================================================ -->
+<section data-screen-label="08 The Dive">
+  <div class="slide surface">
+    <div class="eyebrow">03 — Our Story · The Unbroken</div>
+    <h2 class="slide-title" style="margin-bottom: 32px;">II.&nbsp;&nbsp;The Dive</h2>
+
+    <div style="columns: 2; column-gap: 72px; max-width: 1680px;">
+        <p style="font-size: 26px; line-height: 1.6; color: var(--chawq-fg-1); margin: 0 0 22px; break-inside: avoid;">We were not willing to accept that. We had spent years in this environment — in engineering, in construction, in the field — and we believed there was a better way. We proposed a circular dredging model: mechanically remove the sediment from the canal floors, transport it by barge, and use it to construct new habitat islands stabilized with native mangroves, seagrasses, and oyster reefs. The pollutant would become the filter. The cost would be a fraction of traditional hydraulic disposal. We were so confident in the approach that we offered to cover the initial engineering and grant work ourselves, eliminating any financial risk to the city.</p>
+        <p style="font-size: 26px; line-height: 1.6; color: var(--chawq-fg-1); margin: 0 0 22px; break-inside: avoid;">The technical reception was warm. City council members were genuinely intrigued. And then, as the proposal moved forward, we walked into a minefield we had not anticipated.</p>
+        <p style="font-size: 26px; line-height: 1.6; color: var(--chawq-fg-1); margin: 0 0 22px; break-inside: avoid;">Organized opposition reframed our work as a threat rather than a contribution. Misinformation moved faster than the science could. We found ourselves defending our motives instead of presenting our data, facing accusations that we were looking to profit off the city rather than help it. The political friction overwhelmed the process. The city withdrew support before we could present a single piece of evidence — before the studies we had offered to fund could even begin.</p>
+        <p style="font-size: 26px; line-height: 1.6; color: var(--chawq-fg-1); margin: 0 0 22px; break-inside: avoid;">It was a hard loss. But sitting with it, something became clear: this was not a Marco Island problem. We had stumbled into a pattern that exists in nearly every Florida municipality. Even when the engineering is sound and the costs are lower, projects die — killed by the same three walls every time. No neutral, trusted science to anchor the conversation. No mechanism to absorb the upfront financial risk. And no structure that could earn community trust without raising questions about motive. These were not local failures. They were systemic ones. And no engineering firm, no matter how skilled, was built to solve them.</p>
+    </div>
+    <div class="chrome-page">03 · The Dive</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     03 — THE FLIGHT
+============================================================ -->
+<section data-screen-label="09 The Flight">
+  <div class="slide">
+    <div class="eyebrow">03 — Our Story · The Unbroken</div>
+    <h2 class="slide-title" style="margin-bottom: 32px;">III.&nbsp;&nbsp;The Flight</h2>
+
+    <div style="columns: 2; column-gap: 72px; max-width: 1680px;">
+        <p style="font-size: 26px; line-height: 1.6; color: var(--chawq-fg-1); margin: 0 0 22px; break-inside: avoid;">That understanding changed everything. We realized that to save Florida's water, we could not just be engineers with a good idea. We had to build an organization specifically designed to survive the conditions that had destroyed our first attempt — one that could provide the neutral science before the politics hardened, absorb the financial risk that paralyzes city councils, earn community trust without a profit motive in the room, and stay committed long after any single project would have been abandoned.</p>
+        <p style="font-size: 26px; line-height: 1.6; color: var(--chawq-fg-1); margin: 0 0 22px; break-inside: avoid;">That is what C-HAWQ is. Not a response to Marco Island's failure, but something built from a clear understanding of why it failed.</p>
+        <p style="font-size: 26px; line-height: 1.6; color: var(--chawq-fg-1); margin: 0 0 22px; break-inside: avoid;">The osprey does not guess. It climbs, watches, and when the moment is right, it commits. It does not circle twice. We built this organization with the same intent — to see clearly, to move precisely, and to not give up on the water that gave so much to us.</p>
+        <p style="font-size: 26px; line-height: 1.6; color: var(--chawq-main-blue); font-weight: 600; margin: 0 0 22px; break-inside: avoid;">Florida has 2,201 impaired bodies of water. Most of the communities living beside them know something is wrong. What they have lacked — until now — is a trusted partner with the science, the resources, and the structure to help them do something about it.</p>
+    </div>
+    <div class="chrome-page">03 · The Flight</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     04 — WHO WE ARE
+============================================================ -->
+<section data-screen-label="10 Who We Are">
+  <div class="slide">
+    <div class="section-mark"><span class="num">04</span><span class="title-text">Who We Are & What We Do</span></div>
+    <h2 class="slide-title">Who We Are</h2>
+
+    <div class="body" style="max-width: 1640px;">
+      <p>The Coastal Habitat and Water Quality Initiative (C-HAWQ, "sea-hawk") is a <strong>science-first Florida nonprofit writing the playbook</strong> on water quality and habitat restoration. We partner with academic researchers from Florida universities to conduct original, neutral research — building a growing shelf of accepted best practices that municipalities can pull from with confidence.</p>
+      <p>Where projects need a running start, our <strong>technical assistance grants cover up to $200,000</strong> in engineering, feasibility studies, and assessments, removing the financial barriers that stall good work before it begins. The result: a source of truth that cuts through political friction, and the resources to turn that truth into a shovel-ready reality.</p>
+      <p style="font-family: var(--font-display); font-weight: 600; font-size: 30px; color: var(--chawq-main-blue); line-height: 1.3; margin-top: 28px; padding: 24px 32px; background: var(--chawq-sky-050); border-left: 4px solid var(--chawq-sky); border-radius: 0 14px 14px 0;">
+        We aren't here to sell a contract; we are here to provide the clarity and momentum required to ensure Florida's waterways thrive for generations.
+      </p>
+    </div>
+    <div class="chrome-page">04 · Who We Are</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     04 — WHAT WE DO
+============================================================ -->
+<section data-screen-label="11 What We Do">
+  <div class="slide surface">
+    <div class="eyebrow">04 — Who We Are & What We Do</div>
+    <h2 class="slide-title">What We Do</h2>
+
+    <div class="four-col">
+      <div class="num-card">
+        <div class="n">01</div>
+        <h4>Remove the Financial Barrier to Entry</h4>
+        <p>Through our Exploration Fund, we provide the critical "first dollar" for engineering and technical studies — fee-free. We make it easy for a city to say yes.</p>
+      </div>
+      <div class="num-card">
+        <div class="n">02</div>
+        <h4>Build the Objective Foundation</h4>
+        <p>We conduct original, independent scientific research to identify the root cause of environmental decline, creating a single source of truth that all stakeholders can trust.</p>
+      </div>
+      <div class="num-card">
+        <div class="n">03</div>
+        <h4>Create Political & Public Momentum</h4>
+        <p>We deploy a mobile science museum that translates complex science into a shared vision, replacing misinformation with a unified narrative and giving politicians the public consensus they need to act.</p>
+      </div>
+      <div class="num-card">
+        <div class="n">04</div>
+        <h4>Leverage the Power of Neutrality</h4>
+        <p>As a nonprofit, we act as a neutral third-party ally — opening doors to partnerships, grants, and levels of trust unavailable to for-profit firms.</p>
+      </div>
+    </div>
+    <div class="chrome-page">04 · What We Do</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     05 — FOUR PILLARS
+============================================================ -->
+<section data-screen-label="12 Four Pillars">
+  <div class="slide">
+    <div class="section-mark"><span class="num">05</span><span class="title-text">Our Four Pillars</span></div>
+    <h2 class="slide-title">Four pillars. One playbook.</h2>
+
+    <div class="four-col">
+      <div class="pillar-mini">
+        <div class="n">01</div>
+        <h4>Exploration Funds</h4>
+        <p>Up to <strong>$200,000</strong> in direct, fee-free technical support: engineering designs, bathymetry studies, and feasibility assessments that would otherwise cost cities hundreds of thousands of dollars before a project even begins.</p>
+        <p>Beyond the data, these funds provide <strong>educational mentorship</strong> on Florida statutes and the P3 model — giving Municipal Champions the institutional confidence to get projects over the line.</p>
+      </div>
+      <div class="pillar-mini">
+        <div class="n">02</div>
+        <h4>Science</h4>
+        <p>C-HAWQ operates on a foundation of <strong>original scientific discovery</strong> targeting the understudied ecosystems of Florida's canal cities. We seek the ground truth rather than applied science supporting a predetermined outcome.</p>
+        <p>Our science-first approach provides an unbiased, undeniable baseline that neutralizes political debates. We are committed to <strong>radical transparency</strong> — all data and research is publicly accessible.</p>
+      </div>
+      <div class="pillar-mini">
+        <div class="n">03</div>
+        <h4>Community Outreach</h4>
+        <p>We deploy a dynamic, <strong>mobile science-museum-style experience</strong> to make high-level research digestible for all ages. We don't just present abstract theories; we showcase proven results and similar successful models from across Florida.</p>
+        <p>Our outreach builds a powerful base of community allies for municipal champions — creating the political tailwind ambitious solutions need.</p>
+      </div>
+      <div class="pillar-mini">
+        <div class="n">04</div>
+        <h4>Nonprofit Status</h4>
+        <p>Our nonprofit status transforms our relationship with municipal partners from a transactional service into a <strong>mission-driven alliance</strong>. Our primary mandate is simply to achieve the greatest possible environmental good.</p>
+        <p>We act as a <strong>collaborative hub</strong> — partnering with NGOs, academic institutions, and volunteers to create a unified front for environmental restoration.</p>
+      </div>
+    </div>
+    <div class="chrome-page">05 · Pillars</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     06 — PROVEN PROCESS 1–5
+============================================================ -->
+<section data-screen-label="13 Proven Process 1-5">
+  <div class="slide">
+    <div class="section-mark"><span class="num">06</span><span class="title-text">The Proven Process</span></div>
+    <h2 class="slide-title" style="margin-bottom: 16px;">Ten steps from stalled vision to executing project.</h2>
+    <p style="font-size: 24px; color: var(--chawq-fg-2); max-width: 1500px; margin: 0 0 26px;">
+      C-HAWQ's 10-step Proven Process transforms a stalled environmental vision into a funded, executing project. <strong style="color: var(--chawq-main-blue);">Steps 1–5 below; 6–10 follow.</strong>
+    </p>
+
+    <div class="ph" style="margin: 0 0 26px;">
+      <div class="tag">Designer</div>
+      <div class="txt">Insert Proven Process visual diagram here — the full 10-step illustrated flow from the C-HAWQ deck.</div>
+    </div>
+
+    <table class="process-table">
+      <thead>
+        <tr><th>Step</th><th>Timeline</th><th>Phase</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="step-n">01</td>
+          <td class="step-time">2–4 Wks</td>
+          <td class="step-phase">Discover the Municipal Champion</td>
+          <td class="step-desc">Target decision-makers personally driven to improve their local environment but lacking a clear path to execution.</td>
+        </tr>
+        <tr>
+          <td class="step-n">02</td>
+          <td class="step-time">2–4 Wks</td>
+          <td class="step-phase">Impress & Engage Emotionally</td>
+          <td class="step-desc">Deploy our mobile experience at conferences to create immediate connection through multi-sensory displays and immersive visuals.</td>
+        </tr>
+        <tr>
+          <td class="step-n">03</td>
+          <td class="step-time">2–4 Wks</td>
+          <td class="step-phase">Capture & Qualify the Vision</td>
+          <td class="step-desc">Formal evaluation bridging initial interest and project viability. Gather comprehensive profile information.</td>
+        </tr>
+        <tr>
+          <td class="step-n">04</td>
+          <td class="step-time">2–4 Wks</td>
+          <td class="step-phase">Schedule the Next Stage</td>
+          <td class="step-desc">Coordinate follow-up meeting with the Champion and their team; identify key decision-makers.</td>
+        </tr>
+        <tr>
+          <td class="step-n">05</td>
+          <td class="step-time">1–2 Mo.</td>
+          <td class="step-phase">Foster Internal Curiosity</td>
+          <td class="step-desc">Introduce the project to internal staff and build grassroots municipal buy-in across all departments.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="chrome-page">06 · Process 1–5</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     06 — PROVEN PROCESS 6–10
+============================================================ -->
+<section data-screen-label="14 Proven Process 6-10">
+  <div class="slide">
+    <div class="eyebrow">06 — The Proven Process · continued</div>
+    <h2 class="slide-title">From defined solution to documented success.</h2>
+
+    <table class="process-table">
+      <thead>
+        <tr><th>Step</th><th>Timeline</th><th>Phase</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="step-n">06</td>
+          <td class="step-time">1–2 Mo.</td>
+          <td class="step-phase">Define & Model the Solution</td>
+          <td class="step-desc">Apply up to $200,000 in direct support. Translate scientific data into engineering-grade visuals for internal approvals.</td>
+        </tr>
+        <tr>
+          <td class="step-n">07</td>
+          <td class="step-time">4–6 Mo.</td>
+          <td class="step-phase">Immersive Public Engagement</td>
+          <td class="step-desc">Deploy the mobile science museum publicly — replacing misinformation with a unified scientific narrative.</td>
+        </tr>
+        <tr>
+          <td class="step-n">08</td>
+          <td class="step-time">4–6 Mo.</td>
+          <td class="step-phase">Provide Political Tailwind</td>
+          <td class="step-desc">Educate the municipality on the P3 process, identify blockers, build long-term institutional confidence.</td>
+        </tr>
+        <tr>
+          <td class="step-n">09</td>
+          <td class="step-time">1–2 Yrs</td>
+          <td class="step-phase">Commit to Funding & Partnership</td>
+          <td class="step-desc">Solidify through a sustainable P3 partnership model. Help raise necessary capital for execution.</td>
+        </tr>
+        <tr>
+          <td class="step-n">10</td>
+          <td class="step-time">1–2 Yrs</td>
+          <td class="step-phase">Promote Success & Use Cases</td>
+          <td class="step-desc">Document and promote project success nationally with compelling before/during/after documentation.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="chrome-page">06 · Process 6–10</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     07 — EVOLUTION TIMELINE
+============================================================ -->
+<section data-screen-label="15 Evolution Timeline">
+  <div class="slide">
+    <div class="section-mark"><span class="num">07</span><span class="title-text">Our Evolution · From Idea to Impact</span></div>
+    <h2 class="slide-title" style="margin-bottom: 14px;">C-HAWQ was not built in a boardroom.</h2>
+    <p style="font-size: 24px; color: var(--chawq-fg-2); max-width: 1500px; margin: 0 0 28px;">
+      It was forged from a real failure, a hard lesson, and an unwavering conviction that Florida's waterways deserve better.
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 18px; margin-top: 8px;">
+      <div class="tl-item" style="padding-top: 32px;">
+        <div class="tl-date" style="font-size: 15px;">Jan 2024</div>
+        <div class="tl-title" style="font-size: 19px; margin-bottom: 8px;">The Idea Takes Root</div>
+        <p class="tl-body" style="font-size: 14px;">Recognizing Marco Island's waterway crisis as solvable but neglected, the concept for a science-first nonprofit restoration catalyst is born.</p>
+      </div>
+      <div class="tl-item" style="padding-top: 32px;">
+        <div class="tl-date" style="font-size: 15px;">Aug 2025</div>
+        <div class="tl-title" style="font-size: 19px; margin-bottom: 8px;">Formally Organized</div>
+        <p class="tl-body" style="font-size: 14px;">C-HAWQ establishes its governance framework and mission structure as a formal nonprofit entity.</p>
+      </div>
+      <div class="tl-item" style="padding-top: 32px;">
+        <div class="tl-date" style="font-size: 15px;">Nov 2025</div>
+        <div class="tl-title" style="font-size: 19px; margin-bottom: 8px;">Full-Time Commitment</div>
+        <p class="tl-body" style="font-size: 14px;">The founding team formalizes goals, relocates to Naples/Marco Island, and transitions to full-time dedication.</p>
+      </div>
+      <div class="tl-item" style="padding-top: 32px;">
+        <div class="tl-date" style="font-size: 15px;">Jan 2026</div>
+        <div class="tl-title" style="font-size: 19px; margin-bottom: 8px;">501(c)(3) Filed</div>
+        <p class="tl-body" style="font-size: 14px;">IRS application submitted for public charity status.</p>
+      </div>
+      <div class="tl-item" style="padding-top: 32px;">
+        <div class="tl-date" style="font-size: 15px;">Feb 2026</div>
+        <div class="tl-title" style="font-size: 19px; margin-bottom: 8px;">Largest Projects to Date</div>
+        <p class="tl-body" style="font-size: 14px;">Formal contacts established with Rookery Bay and South Florida Water Management District.</p>
+      </div>
+      <div class="tl-item" style="padding-top: 32px;">
+        <div class="tl-date" style="font-size: 15px;">Feb–May 2026</div>
+        <div class="tl-title" style="font-size: 19px; margin-bottom: 8px;">Rapid Team Expansion</div>
+        <p class="tl-body" style="font-size: 14px;">C-HAWQ scales headcount to meet growing project demand across the state.</p>
+      </div>
+      <div class="tl-item" style="padding-top: 32px;">
+        <div class="tl-date" style="font-size: 15px; color: var(--chawq-green);">Mar 23, 2026</div>
+        <div class="tl-title" style="font-size: 19px; margin-bottom: 8px; color: var(--chawq-green);">501(c)(3) GRANTED</div>
+        <p class="tl-body" style="font-size: 14px;">IRS determination backdated to Aug 7, 2025. Achieved in under 90 days — typical timeline is 12–18 months.</p>
+      </div>
+    </div>
+
+    <div style="margin-top: auto; padding-top: 36px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; border-top: 1px solid var(--chawq-line);">
+      <div class="badge-501"><span class="check">✓</span>501(c)(3) Public Charity</div>
+      <div style="font-family: var(--font-mono); font-size: 17px; color: var(--chawq-fg-2); letter-spacing: 0.06em;">
+        Effective Aug 7, 2025 &nbsp;·&nbsp; Granted Mar 23, 2026 &nbsp;·&nbsp; All contributions fully tax-deductible
+      </div>
+    </div>
+    <div class="chrome-page">07 · Evolution</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     08 — PROJECT PIPELINE
+============================================================ -->
+<section data-screen-label="16 Project Pipeline">
+  <div class="slide">
+    <div class="section-mark"><span class="num">08</span><span class="title-text">Project Pipeline</span></div>
+    <h2 class="slide-title" style="margin-bottom: 14px;">9 active opportunities across Florida.</h2>
+    <p style="font-size: 22px; color: var(--chawq-fg-2); max-width: 1700px; margin: 0 0 22px;">
+      Projects are presented at the municipality / district level. Specific site details and NDA-protected projects are excluded. Pipeline values reflect potential project scope — <strong style="color: var(--chawq-main-blue);">C-HAWQ operates fee-free to municipalities.</strong>
+    </p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 26%;">Municipality / District</th>
+          <th style="width: 20%;">Geography</th>
+          <th style="width: 24%;">Proven Process Stage</th>
+          <th>Focus Area</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="muni">Rookery Bay NERR — Henderson Creek</td><td>Collier County, FL</td><td class="mono">Step 6: Define & Model · <strong>$3.9M+</strong></td><td>Estuarine canal dredging & habitat restoration</td></tr>
+        <tr><td class="muni">SFWMD — Pickwick Lake</td><td>South Florida</td><td class="mono">Step 6: Define & Model · <strong>$2.1M+</strong></td><td>Lake restoration & water quality improvement</td></tr>
+        <tr><td class="muni">SFWMD — Grant Program</td><td>South Florida</td><td class="mono">Step 6: Define & Model · <strong>$100M+</strong></td><td>Grant facilitation & program support</td></tr>
+        <tr><td class="muni">SJRWMD — Tomoka Impoundment</td><td>St. Johns River WMD, FL</td><td class="mono">Step 5: Foster Internal Curiosity</td><td>Impoundment restoration & water quality</td></tr>
+        <tr><td class="muni">City of Boynton Beach</td><td>Boynton Beach, FL</td><td class="mono">Step 5: Foster Internal Curiosity</td><td>Coastal resiliency initiative</td></tr>
+        <tr><td class="muni">Brevard County — Canals</td><td>Brevard County, FL</td><td class="mono">Step 3: Capture & Qualify · <strong>$12M+</strong></td><td>Residential canal water quality</td></tr>
+        <tr><td class="muni">City of St. Petersburg</td><td>St. Petersburg, FL</td><td class="mono">Step 3: Capture & Qualify</td><td>Coastal resiliency initiative</td></tr>
+        <tr><td class="muni">City of Tampa</td><td>Tampa, FL</td><td class="mono">Step 3: Capture & Qualify</td><td>Coastal resiliency initiative</td></tr>
+        <tr><td class="muni">City of Jacksonville</td><td>Jacksonville, FL</td><td class="mono">Step 3: Capture & Qualify</td><td>Coastal resiliency initiative</td></tr>
+      </tbody>
+    </table>
+
+    <div class="chrome-page">08 · Pipeline</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     09 — VTO: CORE VALUES & FOCUS
+============================================================ -->
+<section data-screen-label="17 VTO Values Focus">
+  <div class="slide">
+    <div class="section-mark"><span class="num">09</span><span class="title-text">Traction & Operating System</span></div>
+    <h2 class="slide-title">Vision / Traction Organizer™</h2>
+    <p style="font-size: 22px; color: var(--chawq-fg-2); max-width: 1600px; margin: -16px 0 32px;">
+      C-HAWQ runs on the <strong style="color: var(--chawq-main-blue);">Entrepreneurial Operating System® (EOS®)</strong> — a comprehensive framework for leadership alignment, accountability, and execution.
+    </p>
+
+    <div class="two-col" style="gap: 60px;">
+      <div>
+        <div style="font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--chawq-sky-900); margin-bottom: 14px;">Core Values</div>
+        <ol style="font-size: 22px; line-height: 1.5; padding-left: 24px; color: var(--chawq-fg-1); margin: 0 0 28px;">
+          <li><strong>Relentlessly Helpful</strong> — ask for help and offer help quickly; make municipalities the hero; white glove service.</li>
+          <li><strong>Compounding Cool.</strong></li>
+          <li><strong>Thought Leader in Our Space.</strong></li>
+          <li><strong>Walk Our Talk.</strong></li>
+          <li><strong>Don't Be a Dick.</strong></li>
+        </ol>
+        <div style="font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--chawq-sky-900); margin-bottom: 14px;">10-Year Target</div>
+        <p style="font-size: 22px; margin: 0;"><strong style="color: var(--chawq-main-blue);">$1 Billion</strong> of habitat and water quality work and an Amazon documentary.</p>
+      </div>
+      <div>
+        <div style="font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--chawq-sky-900); margin-bottom: 14px;">Core Focus</div>
+        <p style="font-size: 22px; margin-bottom: 14px;"><strong style="color: var(--chawq-main-blue);">Purpose:</strong> Create bespoke solutions for municipalities' habitat and water quality problems quickly.</p>
+        <p style="font-size: 22px; margin-bottom: 28px;"><strong style="color: var(--chawq-main-blue);">Niche:</strong> Specify Vision, Expand Possibilities, Help Execute for Florida Municipalities.</p>
+
+        <div style="font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--chawq-sky-900); margin-bottom: 14px;">Marketing</div>
+        <p style="font-size: 22px; margin-bottom: 10px;"><strong style="color: var(--chawq-main-blue);">Target:</strong> Coastal Florida Municipalities and Agencies.</p>
+        <p style="font-size: 22px; margin-bottom: 10px;"><strong style="color: var(--chawq-main-blue);">4 Uniques:</strong> Exploration Funds &nbsp;·&nbsp; Science & Academia &nbsp;·&nbsp; Community Outreach &nbsp;·&nbsp; Nonprofit.</p>
+        <p style="font-size: 22px; margin: 0;"><strong style="color: var(--chawq-main-blue);">Commitment:</strong> A science-first solution that is achievable with a clear path forward.</p>
+      </div>
+    </div>
+    <div class="chrome-page">09 · VTO</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     09 — VTO TARGETS (3 / 1 year)
+============================================================ -->
+<section data-screen-label="18 VTO Targets">
+  <div class="slide blue">
+    <div class="eyebrow">09 — Traction & Operating System</div>
+    <h2 class="slide-title">From 10-Year Vision to 1-Year Plan</h2>
+
+    <div class="three-col" style="margin-top: 12px;">
+      <div class="num-card">
+        <div class="n" style="font-size: 40px;">10-Year</div>
+        <h4 style="font-size: 26px;">Target</h4>
+        <p style="font-size: 22px; line-height: 1.45;"><strong>$1 Billion</strong> of habitat and water quality work — and an Amazon documentary.</p>
+      </div>
+      <div class="num-card">
+        <div class="n" style="font-size: 40px;">3-Year</div>
+        <h4 style="font-size: 26px;">Aug 2028</h4>
+        <ul class="dot" style="font-size: 18px; line-height: 1.4; color: var(--chawq-on-blue-2);">
+          <li>$200M funded efforts</li>
+          <li>45 qualified pipeline projects</li>
+          <li>2 published research papers</li>
+          <li>70,000 people demonstrated to</li>
+          <li>1M digital impressions</li>
+          <li>1 streaming documentary</li>
+        </ul>
+      </div>
+      <div class="num-card">
+        <div class="n" style="font-size: 40px;">1-Year</div>
+        <h4 style="font-size: 26px;">Nov 2026</h4>
+        <ul class="dot" style="font-size: 18px; line-height: 1.4; color: var(--chawq-on-blue-2);">
+          <li>7 projects in Define stage</li>
+          <li>5 iterations of polished Proven Process</li>
+          <li>Complete MVPs</li>
+          <li>Established research arm + metrics</li>
+          <li>501(c)(3) credibility</li>
+          <li>Office & automation</li>
+        </ul>
+      </div>
+    </div>
+    <div class="chrome-page">09 · VTO Targets</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     09 — CURRENT 90-DAY ROCKS
+============================================================ -->
+<section data-screen-label="19 90 Day Rocks">
+  <div class="slide">
+    <div class="eyebrow">09 — Traction & Operating System</div>
+    <h2 class="slide-title">Current 90-Day Rocks</h2>
+    <p style="font-size: 22px; color: var(--chawq-fg-2); margin: -16px 0 24px;">
+      <strong style="color: var(--chawq-main-blue);">Target: June 24, 2026.</strong>
+    </p>
+
+    <table class="data-table">
+      <thead>
+        <tr><th style="width: 150px;">Owner</th><th style="width: 28%;">Rock</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="muni">Ryan</td>
+          <td><strong>Digital Presence Framework</strong></td>
+          <td>Contractors corner, Collier County digital presence, ManaVision launch, consistent social media, first documentary produced.</td>
+        </tr>
+        <tr>
+          <td class="muni">Emily</td>
+          <td><strong>Project Execution</strong></td>
+          <td>Agreeing process with professors, grant program live (MOU), SFWMD partnership agreement, modeled solution for Rookery Bay, formalizing PP ownership and scorecard.</td>
+        </tr>
+        <tr>
+          <td class="muni">Logan</td>
+          <td><strong>C-HAWQ Community Credibility</strong></td>
+          <td>Certification courses (FSESCI, venomous handling, coastal restoration), presentation procedure, Collier County physical presence (CAP, herp society).</td>
+        </tr>
+        <tr>
+          <td class="muni">Nathan</td>
+          <td><strong>Residential Canal GIS Mapping</strong></td>
+          <td>Finalized canal polygon data, static and interactive maps, web layers published, AI tool pipeline integration.</td>
+        </tr>
+        <tr>
+          <td class="muni">Lorine</td>
+          <td><strong>Proven Process Refinement</strong></td>
+          <td>Identify elements owned by agents, summary document, refinement and feedback loop, GHL integration, project management handoffs.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="chrome-page">09 · Rocks</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     10 — MEET THE TEAM (Leadership 3)
+============================================================ -->
+<section data-screen-label="20 Team Leadership">
+  <div class="slide">
+    <div class="section-mark"><span class="num">10</span><span class="title-text">Meet the Team</span></div>
+    <h2 class="slide-title" style="margin-bottom: 8px;">The right people, in the right seats, with the right mission.</h2>
+    <p style="font-size: 22px; color: var(--chawq-fg-2); margin: 0 0 30px;">
+      C-HAWQ is built on the belief that the right people can change the future of Florida's water. <strong style="color: var(--chawq-main-blue);">Officers —</strong>
+    </p>
+
+    <div class="team-grid">
+      <div class="team-card">
+        <div class="photo" style="background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%);"></div>
+        <div class="info">
+          <div class="name">Chris Ripley</div>
+          <div class="role">Executive Director</div>
+          <p class="bio">Serial entrepreneur with 15+ years at the intersection of technology, environmental policy, and government affairs. Built a startup into a billion-dollar enterprise managing the nation's largest household hazardous waste disposal programs. At C-HAWQ, Chris is the strategic architect: building academic partnerships, implementing Traction, and representing C-HAWQ at conferences across Florida.</p>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="photo" style="background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%);"></div>
+        <div class="info">
+          <div class="name">Emily Begin</div>
+          <div class="role">Vice Executive Director & Treasurer</div>
+          <p class="bio">Over 10 years of project management experience in the technology sector. Translates strategic vision into daily execution — managing team operations, coordinating professors, partners, and advisors. Emily leads the team's execution of documents and presentations and is one of C-HAWQ's primary drivers of new municipal leads.</p>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="photo" style="background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%);"></div>
+        <div class="info">
+          <div class="name">Logan Davies</div>
+          <div class="role">Head of Wildlife & Restoration</div>
+          <p class="bio">Lifelong herpetologist with seven years of hands-on experience in major construction and urban stormwater management. Driving force behind C-HAWQ's mobile science museum and conference presence. Recently brought C-HAWQ's first educational animal ambassador into the fold, deepening community connections.</p>
+        </div>
+      </div>
+    </div>
+    <div class="chrome-page">10 · Team</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     10 — MEET THE TEAM (Ryan, Lorine, Nathan)
+============================================================ -->
+<section data-screen-label="21 Team Operations">
+  <div class="slide">
+    <div class="eyebrow">10 — Meet the Team, continued</div>
+    <h2 class="slide-title" style="margin-bottom: 8px;">Creative, project, and research backbone.</h2>
+    <p style="font-size: 22px; color: var(--chawq-fg-2); margin: 0 0 30px;">The team turning the vision into content, systems, and field execution.</p>
+
+    <div class="team-grid">
+      <div class="team-card">
+        <div class="photo" style="background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%);"></div>
+        <div class="info">
+          <div class="name">Ryan Begin</div>
+          <div class="role">Creative Director</div>
+          <p class="bio">Eight years of drone cinematography, videography, photography, and graphic design. Building an AI-powered marketing platform that aggregates research, grant opportunities, and industry news into a dynamic content engine. Official documentarian for every C-HAWQ project.</p>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="photo" style="background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%); background-color: var(--chawq-main-blue-100);"></div>
+        <div class="info">
+          <div class="name">Lorine Najjar</div>
+          <div class="role">Project Manager</div>
+          <p class="bio">Background spanning paralegal work in trust, estate, and construction law, UNICEF humanitarian service in Syria, and global policy advocacy. Managed 1,000+ clients as Lead Coordinator at a top Denver law firm. Growing into a full project management leadership role at C-HAWQ.</p>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="photo" style="background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%); background-position: center 15%;"></div>
+        <div class="info">
+          <div class="name">Nathan Hewitt</div>
+          <div class="role">Environmental Research Technician</div>
+          <p class="bio">Completing his M.S. in Environmental Science at FGCU. Research on coastal dune restoration, Hurricane Ian impacts, and HAB predictive modeling. FAA Part 107 drone pilot, AAUS Scientific Diver, proficient in ArcGIS and Python. Leads the statewide residential canal GIS project.</p>
+        </div>
+      </div>
+    </div>
+    <div class="chrome-page">10 · Team</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     11 — GOVERNANCE: OFFICERS
+============================================================ -->
+<section data-screen-label="22 Governance Officers">
+  <div class="slide">
+    <div class="section-mark"><span class="num">11</span><span class="title-text">Governance & Compliance</span></div>
+    <h2 class="slide-title">Founding Officers</h2>
+    <p style="font-size: 22px; color: var(--chawq-fg-2); max-width: 1700px; margin: -16px 0 28px;">
+      C-HAWQ is currently governed by its three founding officers. As the organization scales, we are actively <strong style="color: var(--chawq-main-blue);">building toward a formal Board of Directors</strong> with representation across environmental science, municipal government, legal, finance, and community advocacy.
+    </p>
+
+    <div class="three-col">
+      <div style="background: var(--chawq-surface-1); padding: 32px; border-radius: 14px; border-top: 4px solid var(--chawq-main-blue);">
+        <div style="font-family: var(--font-mono); font-size: 18px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--chawq-sky-900); margin-bottom: 14px;">Officer</div>
+        <div style="font-family: var(--font-display); font-weight: 800; font-size: 32px; color: var(--chawq-main-blue); line-height: 1.1; margin-bottom: 8px;">Chris Ripley</div>
+        <div style="font-family: var(--font-display); font-weight: 600; font-size: 20px; color: var(--chawq-sky-900); margin-bottom: 16px;">Executive Director</div>
+        <p style="font-size: 20px; line-height: 1.45; color: var(--chawq-fg-2); margin: 0;">Strategic direction, academic partnerships, external representation.</p>
+      </div>
+      <div style="background: var(--chawq-surface-1); padding: 32px; border-radius: 14px; border-top: 4px solid var(--chawq-main-blue);">
+        <div style="font-family: var(--font-mono); font-size: 18px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--chawq-sky-900); margin-bottom: 14px;">Officer</div>
+        <div style="font-family: var(--font-display); font-weight: 800; font-size: 32px; color: var(--chawq-main-blue); line-height: 1.1; margin-bottom: 8px;">Emily Begin</div>
+        <div style="font-family: var(--font-display); font-weight: 600; font-size: 20px; color: var(--chawq-sky-900); margin-bottom: 16px;">Vice Executive Director & Treasurer</div>
+        <p style="font-size: 20px; line-height: 1.45; color: var(--chawq-fg-2); margin: 0;">Operations, project management, partner relations, financial oversight.</p>
+      </div>
+      <div style="background: var(--chawq-surface-1); padding: 32px; border-radius: 14px; border-top: 4px solid var(--chawq-main-blue);">
+        <div style="font-family: var(--font-mono); font-size: 18px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--chawq-sky-900); margin-bottom: 14px;">Officer</div>
+        <div style="font-family: var(--font-display); font-weight: 800; font-size: 32px; color: var(--chawq-main-blue); line-height: 1.1; margin-bottom: 8px;">Logan Davies</div>
+        <div style="font-family: var(--font-display); font-weight: 600; font-size: 20px; color: var(--chawq-sky-900); margin-bottom: 16px;">Secretary</div>
+        <p style="font-size: 20px; line-height: 1.45; color: var(--chawq-fg-2); margin: 0;">Wildlife & restoration programs, conference presence, community engagement.</p>
+      </div>
+    </div>
+
+    <div style="margin-top: 40px; padding: 24px 32px; background: var(--chawq-main-blue-050); border-left: 4px solid var(--chawq-sky); border-radius: 0 14px 14px 0;">
+      <div style="font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--chawq-sky-900); margin-bottom: 10px;">Now Seeking</div>
+      <p style="font-size: 22px; line-height: 1.4; color: var(--chawq-fg-1); margin: 0;">Board members with backgrounds in <strong>municipal government, environmental law, nonprofit finance, coastal science,</strong> and <strong>community development.</strong></p>
+    </div>
+    <div class="chrome-page">11 · Officers</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     11 — LEGAL & FINANCIAL COMPLIANCE
+============================================================ -->
+<section data-screen-label="23 Compliance">
+  <div class="slide">
+    <div class="eyebrow">11 — Governance & Compliance</div>
+    <h2 class="slide-title">Legal & Financial Compliance</h2>
+
+    <div class="compliance-grid">
+      <div class="compliance-item"><strong>501(c)(3) Public Charity</strong> — Effective Aug 7, 2025 · IRS determination Mar 23, 2026</div>
+      <div class="compliance-item"><strong>Florida DACS</strong> Charitable Organization Registration #CH83290 — annual renewal</div>
+      <div class="compliance-item"><strong>Florida Division of Corporations</strong> — Annual Sunbiz report filed</div>
+      <div class="compliance-item"><strong>Articles of Incorporation</strong> — Filed with Florida Division of Corporations</div>
+      <div class="compliance-item"><strong>Organizational Bylaws</strong> — Adopted by founding officers</div>
+      <div class="compliance-item"><strong>Form 990</strong> annual information return required (accounting period ending Dec 31)</div>
+      <div class="compliance-item"><strong>Conflict of Interest Policy</strong> — Adopted for all officers and key employees</div>
+      <div class="compliance-item"><strong>Whistleblower Protection Policy</strong> — Adopted; prohibits retaliation</div>
+      <div class="compliance-item"><strong>Document Retention & Destruction Policy</strong> — Records management and retention schedules</div>
+      <div class="compliance-item"><strong>Gift Acceptance Policy</strong> — Cash, check, credit card, wire transfer, in-kind contributions</div>
+      <div class="compliance-item"><strong>Expense Reimbursement Policy</strong> — Expensify with receipts required</div>
+      <div class="compliance-item"><strong>Financial Controls</strong> — Dual authorization for expenditures above thresholds</div>
+      <div class="compliance-item"><strong>Donor Privacy Policy</strong> — Donor info never sold, shared, or used beyond stewardship</div>
+      <div class="compliance-item"><strong>Insurance</strong> — General liability maintained; D&O insurance to be procured</div>
+      <div class="compliance-item"><strong>Greater Naples Chamber of Commerce</strong> — Active member</div>
+    </div>
+    <div class="chrome-page">11 · Compliance</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     12 — SCIENTIFIC ADVISORS (Part 1)
+============================================================ -->
+<section data-screen-label="24 Scientific Advisors 1">
+  <div class="slide">
+    <div class="section-mark"><span class="num">12</span><span class="title-text">Scientific Advisors & Partners</span></div>
+    <h2 class="slide-title" style="margin-bottom: 8px;">Six PhD researchers from leading institutions.</h2>
+    <p style="font-size: 22px; color: var(--chawq-fg-2); max-width: 1700px; margin: 0 0 22px;">
+      Providing independent credibility across marine ecology, hydrology, water resources, and environmental engineering.
+    </p>
+
+    <div class="advisor-grid">
+      <div class="advisor-card">
+        <div class="photo" style="background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%);"></div>
+        <div class="name">Chris Stallings, Ph.D.</div>
+        <div class="aff">Professor · USF College of Marine Science</div>
+        <p class="bio">Research focuses on ecological processes driving population and community dynamics of marine organisms. Field-intensive work across experimental and large-scale observational approaches, mesocosm experiments, stable isotope analyses, and GIS-based ecological pattern analysis.</p>
+      </div>
+      <div class="advisor-card">
+        <div class="photo" style="background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%);"></div>
+        <div class="name">Holden Harris, Ph.D.</div>
+        <div class="aff">University of Florida</div>
+        <p class="bio">Quantitative ecologist studying marine and coastal social-ecological systems using synthesis science, quantitative ecology, and ecosystem modeling. Research rooted in engaging stakeholders as partners in innovation and management strategy.</p>
+      </div>
+      <div class="advisor-card">
+        <div class="photo" style="background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%); background-color: var(--chawq-main-blue-050);"></div>
+        <div class="name">Mike Allen, Ph.D.</div>
+        <div class="aff">Professor · UF Fisheries & Aquatic Sciences · Director, Nature Coast Biological Station</div>
+        <p class="bio">Research focused on population dynamics and ecology of commercially important fish species. Over 160 peer-reviewed publications. Voting member of the Gulf Fisheries Management Council. Former President, Southern Division American Fisheries Society.</p>
+      </div>
+      <div class="advisor-card">
+        <div class="photo" style="background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%);"></div>
+        <div class="name">David Kaplan, Ph.D.</div>
+        <div class="aff">Professor · UF ESSIE · Director, H.T. Odum Center for Wetlands · Assoc. Director, UF Center for Coastal Solutions</div>
+        <p class="bio">Watershed Ecology Lab connects hydrological cycle, ecosystem processes, and human activities to advance natural resources management. Works extensively with water and environmental management agencies to connect hydrological modeling to ecological outcomes at scale.</p>
+      </div>
+    </div>
+    <div class="chrome-page">12 · Advisors</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     12 — SCIENTIFIC ADVISORS (Part 2)
+============================================================ -->
+<section data-screen-label="25 Scientific Advisors 2">
+  <div class="slide">
+    <div class="eyebrow">12 — Scientific Advisors, continued</div>
+    <h2 class="slide-title" style="margin-bottom: 8px;">Engineering and Florida-coast extension.</h2>
+    <p style="font-size: 22px; color: var(--chawq-fg-2); margin: 0 0 22px;">Two additional advisors completing the six-person scientific bench.</p>
+
+    <div class="advisor-grid" style="grid-template-columns: repeat(2, 1fr); gap: 80px; max-width: 1400px;">
+      <div class="advisor-card">
+        <div class="photo" style="background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%); aspect-ratio: 4 / 3; background-position: center 25%;"></div>
+        <div class="name" style="font-size: 26px;">Christopher B. Burke, Ph.D., P.E.</div>
+        <div class="aff" style="font-size: 17px;">Founder & CEO, Christopher B. Burke Engineering · Professor of Practice, University of Illinois Chicago</div>
+        <p class="bio" style="font-size: 17px;">Built CBBEL into one of the nation's most respected water resources consultancies over nearly four decades. Leading expert in stormwater management, urban drainage, and hydrology. Member of both the National Academy of Engineering and the National Academy of Construction. ASCE President's Medal recipient.</p>
+      </div>
+      <div class="advisor-card">
+        <div class="photo" style="background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%); aspect-ratio: 4 / 3; background-position: center 25%;"></div>
+        <div class="name" style="font-size: 26px;">Vincent Encomio, Ph.D.</div>
+        <div class="aff" style="font-size: 17px;">Florida Sea Grant Extension Agent II · UF/IFAS Extension · Martin & St. Lucie Counties</div>
+        <p class="bio" style="font-size: 17px;">Extension programming covers coastal health, habitat restoration, and water quality along the Treasure Coast — the southern end of the Indian River Lagoon, the most biodiverse estuary in North America. Led the Florida Sea Grant Marine Contractor Living Shoreline Training Course. 2023 FAEP Environmental Excellence Award recipient.</p>
+      </div>
+    </div>
+    <div class="chrome-page">12 · Advisors</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     12 — C-HAWQ PARTNERS
+============================================================ -->
+<section data-screen-label="26 Partners">
+  <div class="slide surface">
+    <div class="eyebrow">12 — Scientific Advisors & Partners</div>
+    <h2 class="slide-title">C-HAWQ Partners</h2>
+
+    <div class="two-col">
+      <div style="background: #fff; padding: 40px; border-radius: 14px; border-top: 4px solid var(--chawq-green);">
+        <div style="font-family: var(--font-mono); font-size: 18px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--chawq-green); margin-bottom: 16px;">Collaborative Network</div>
+        <h3 style="font-family: var(--font-display); font-weight: 800; font-size: 32px; color: var(--chawq-main-blue); margin: 0 0 18px; line-height: 1.15;">Southwest Florida Estuarine Restoration Team (SWERT)</h3>
+        <p style="font-size: 22px; line-height: 1.5; color: var(--chawq-fg-1); margin: 0;">Collaborative network of state, federal, and regional agencies and nonprofits dedicated to restoration and enhancement of coastal habitats across Southwest Florida — Manatee County to the Southern Everglades.</p>
+      </div>
+      <div style="background: #fff; padding: 40px; border-radius: 14px; border-top: 4px solid var(--chawq-green);">
+        <div style="font-family: var(--font-mono); font-size: 18px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--chawq-green); margin-bottom: 16px;">Professional Society</div>
+        <h3 style="font-family: var(--font-display); font-weight: 800; font-size: 32px; color: var(--chawq-main-blue); margin: 0 0 18px; line-height: 1.15;">Florida Chapter — The Wildlife Society</h3>
+        <p style="font-size: 22px; line-height: 1.5; color: var(--chawq-fg-1); margin: 0;">The Florida Chapter of The Wildlife Society represents wildlife professionals dedicated to sustainable management of wildlife resources and their habitats. This partnership connects C-HAWQ to Florida's professional wildlife community — strengthening ecological credibility, expanding conference presence, and opening collaborative pathways for wildlife-integrated restoration projects.</p>
+      </div>
+    </div>
+    <div class="chrome-page">12 · Partners</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     13 — NATURE-BASED SOLUTIONS
+============================================================ -->
+<section data-screen-label="27 Nature Based Solutions">
+  <div class="slide">
+    <div class="section-mark"><span class="num">13</span><span class="title-text">Nature-Based Solutions We Champion</span></div>
+    <h2 class="slide-title" style="margin-bottom: 8px;">Proven, nature-forward restoration strategies.</h2>
+    <p style="font-size: 22px; color: var(--chawq-fg-2); max-width: 1700px; margin: 0 0 22px;">
+      At every conference, community event, and municipal meeting, we translate this science into something people can see, touch, and understand. <span style="font-family: var(--font-mono); font-size: 16px; color: var(--chawq-sky-900); letter-spacing: 0.04em;">[Designer: supporting infographics to be inserted per solution.]</span>
+    </p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 22%;">Solution</th>
+          <th>Description</th>
+          <th style="width: 26%;">Key Efficacy</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="muni">Living Shorelines</td>
+          <td>Uses oyster reefs, mangroves, and native marsh grasses to absorb wave energy and rebuild habitat — replacing hardened seawalls that reflect energy and accelerate erosion.</td>
+          <td class="mono"><strong>50–100%</strong> wave energy reduction in densely vegetated zones</td>
+        </tr>
+        <tr>
+          <td class="muni">Beneficial Reuse Dredging</td>
+          <td>Repurposes dredged canal sediment to construct Habitat Islands stabilized with native mangroves and oyster reefs — turning a disposal liability into a self-sustaining biological filter.</td>
+          <td class="mono">Eliminates <strong>$189M+</strong> traditional disposal cost; creates net-positive habitat</td>
+        </tr>
+        <tr>
+          <td class="muni">Oyster Reef Restoration</td>
+          <td>Creates natural filtration, wave attenuation, and nursery habitat for juvenile fish species.</td>
+          <td class="mono">1 oyster filters up to <strong>50 gal/day</strong>; reefs reduce wave height <strong>50–95%</strong></td>
+        </tr>
+        <tr>
+          <td class="muni">Water Farms & Native Vegetation</td>
+          <td>Strategic placement of native aquatic plants and engineered wetland cells captures nutrient-rich stormwater before it enters canals.</td>
+          <td class="mono">Reduces nitrogen and phosphorus loading <strong>at the source</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="chrome-page">13 · Solutions</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     13 — PHYSICAL DEMONSTRATIONS
+============================================================ -->
+<section data-screen-label="28 Physical Demonstrations">
+  <div class="slide surface">
+    <div class="eyebrow">13 — Nature-Based Solutions</div>
+    <h2 class="slide-title">Our Physical Demonstrations</h2>
+    <p style="font-size: 22px; color: var(--chawq-fg-2); max-width: 1700px; margin: -16px 0 28px;">
+      We bring science into the room through hands-on models that make the abstract tangible.
+    </p>
+
+    <div class="three-col">
+      <div style="background: #fff; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid var(--chawq-line);">
+        <div style="height: 470px; background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%); background-size: contain; background-repeat: no-repeat; background-position: center; background-color: var(--chawq-surface-2);"></div>
+        <div style="padding: 28px 30px;">
+          <div style="font-family: var(--font-mono); font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--chawq-sky-900); margin-bottom: 10px;">Demonstration 01</div>
+          <h4 style="font-family: var(--font-display); font-weight: 800; font-size: 26px; color: var(--chawq-main-blue); margin: 0 0 12px; line-height: 1.15;">Wave Action Table</h4>
+          <p style="font-size: 19px; line-height: 1.45; color: var(--chawq-fg-2); margin: 0;">Live demonstration of mangrove root wave attenuation (<strong>13–66% at 100m, 50–100% at 500m</strong>).</p>
+        </div>
+      </div>
+      <div style="background: #fff; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid var(--chawq-line);">
+        <div style="height: 470px; background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%); background-size: contain; background-repeat: no-repeat; background-position: center; background-color: var(--chawq-surface-2);"></div>
+        <div style="padding: 28px 30px;">
+          <div style="font-family: var(--font-mono); font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--chawq-sky-900); margin-bottom: 10px;">Demonstration 02</div>
+          <h4 style="font-family: var(--font-display); font-weight: 800; font-size: 26px; color: var(--chawq-main-blue); margin: 0 0 12px; line-height: 1.15;">Habitat Island Resin Model</h4>
+          <p style="font-size: 19px; line-height: 1.45; color: var(--chawq-fg-2); margin: 0;">3D visualization of beneficial reuse dredging outcomes.</p>
+        </div>
+      </div>
+      <div style="background: #fff; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid var(--chawq-line);">
+        <div style="height: 470px; background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%); background-size: contain; background-repeat: no-repeat; background-position: center; background-color: var(--chawq-surface-2);"></div>
+        <div style="padding: 28px 30px;">
+          <div style="font-family: var(--font-mono); font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--chawq-sky-900); margin-bottom: 10px;">Demonstration 03</div>
+          <h4 style="font-family: var(--font-display); font-weight: 800; font-size: 26px; color: var(--chawq-main-blue); margin: 0 0 12px; line-height: 1.15;">Water Quality Tank</h4>
+          <p style="font-size: 19px; line-height: 1.45; color: var(--chawq-fg-2); margin: 0;">Interactive canal sediment and nutrient dynamics display.</p>
+        </div>
+      </div>
+    </div>
+    <div class="chrome-page">13 · Demos</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     14 — CONFERENCES — STATS
+============================================================ -->
+<section data-screen-label="29 Conference Stats">
+  <div class="slide blue">
+    <div class="section-mark"><span class="num">14</span><span class="title-text">Conferences & Field Presence</span></div>
+    <h2 class="slide-title" style="max-width: 1500px;">Showing up where decisions are made.</h2>
+    <p style="font-family: var(--font-display); font-weight: 500; font-size: 30px; line-height: 1.4; color: var(--chawq-on-blue-2); max-width: 1500px; margin: 0 0 36px;">
+      C-HAWQ believes solving Florida's water quality crisis requires more than science — it requires showing up where decisions are made.
+    </p>
+
+    <div class="stats">
+      <div class="stat"><div class="num">16+</div><div class="lbl">Conferences<br>& Events</div></div>
+      <div class="stat"><div class="num">5+</div><div class="lbl">Speaker &<br>Panelist Roles</div></div>
+      <div class="stat"><div class="num">10,900+</div><div class="lbl">People<br>Reached</div></div>
+      <div class="stat"><div class="num">2</div><div class="lbl">Upcoming<br>in 2026</div></div>
+    </div>
+    <div class="chrome-page">14 · Conferences</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     14 — UPCOMING + PAST 2026 CONFERENCES
+============================================================ -->
+<section data-screen-label="30 Conferences Upcoming 2026">
+  <div class="slide">
+    <div class="eyebrow">14 — Conferences & Field Presence</div>
+    <h2 class="slide-title">Upcoming & 2026 field presence.</h2>
+
+    <table class="data-table" style="font-size: 19px;">
+      <thead>
+        <tr><th style="width: 38%;">Conference</th><th style="width: 18%;">Date</th><th style="width: 28%;">C-HAWQ Role</th><th>Attn.</th></tr>
+      </thead>
+      <tbody>
+        <tr class="subhead"><td colspan="4">Upcoming</td></tr>
+        <tr><td class="muni">Engineering Permitting Summer School</td><td class="mono">Jul 21–26, 2026</td><td>Exhibitor</td><td>—</td></tr>
+        <tr><td class="muni">Florida Resilience Conference</td><td class="mono">Sep 23–25, 2026</td><td>Exhibitor</td><td>—</td></tr>
+        <tr class="subhead"><td colspan="4">Past — 2026</td></tr>
+        <tr><td class="muni">FCCMA Annual Conference</td><td class="mono">May 27–30, 2026</td><td>Exhibitor</td><td class="num">375</td></tr>
+        <tr><td class="muni">Wildlife Society FL — Spring Conference</td><td class="mono">Apr 15–17, 2026</td><td>Exhibitor</td><td class="num">250</td></tr>
+        <tr><td class="muni">Florida Water Resources Conference (FWRC)</td><td class="mono">Apr 26–29, 2026</td><td>Exhibitor + Technical Speaker</td><td class="num">3,000</td></tr>
+        <tr><td class="muni">FAEP Annual Conference</td><td class="mono">Apr 29–May 1, 2026</td><td>Exhibitor + Awards Speaker</td><td class="num">350</td></tr>
+        <tr><td class="muni">SSDN Annual Meeting</td><td class="mono">May 4–5, 2026</td><td>Exhibitor</td><td class="num">200</td></tr>
+        <tr><td class="muni">IECA Annual Conference — Fort Worth TX</td><td class="mono">Mar 4, 2026</td><td>Speaker</td><td class="num">50</td></tr>
+        <tr><td class="muni">Disasters Expo USA — Miami FL</td><td class="mono">Mar 5–6, 2026</td><td>Exhibitor + Speaker</td><td class="num">4,000</td></tr>
+        <tr><td class="muni">Earth Day — Sierra Club Broward</td><td class="mono">Mar 2026</td><td>Exhibitor + Panelist w/ Commissioner</td><td class="num">1,500</td></tr>
+        <tr><td class="muni">Everglades Coalition Conference</td><td class="mono">Jan 28–30, 2026</td><td>Exhibitor</td><td class="num">200</td></tr>
+      </tbody>
+    </table>
+    <div class="chrome-page">14 · Conferences</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     14 — PAST 2024 & 2025 CONFERENCES
+============================================================ -->
+<section data-screen-label="31 Conferences 2024 2025">
+  <div class="slide">
+    <div class="eyebrow">14 — Conferences, continued</div>
+    <h2 class="slide-title">Past — 2024 & 2025.</h2>
+
+    <table class="data-table">
+      <thead>
+        <tr><th style="width: 40%;">Conference</th><th style="width: 22%;">Date</th><th style="width: 22%;">C-HAWQ Role</th><th>Attn.</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="muni">Swamp Heritage Festival — Big Cypress</td><td class="mono">Dec 5, 2025</td><td>Exhibitor</td><td class="num">1,000</td></tr>
+        <tr><td class="muni">SER World Conference — Denver CO</td><td class="mono">Sep 30 – Oct 4, 2025</td><td>Presenter</td><td class="num">~50 session</td></tr>
+        <tr><td class="muni">Florida Resilience Conference</td><td class="mono">Sep 17–19, 2025</td><td>Exhibitor + Presenter</td><td>—</td></tr>
+        <tr><td class="muni">Everglades Coalition Conference</td><td class="mono">Jan 30 – Feb 1, 2025</td><td>Exhibitor</td><td>—</td></tr>
+        <tr><td class="muni">Florida Resilience Conference</td><td class="mono">Sep 11–13, 2024</td><td>Exhibitor</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <div class="chrome-page">14 · Conferences</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     15 — PUBLISHED RESEARCH
+============================================================ -->
+<section data-screen-label="32 Published Research">
+  <div class="slide">
+    <div class="section-mark"><span class="num">15</span><span class="title-text">Our Latest Research</span></div>
+    <h2 class="slide-title" style="font-size: 52px; max-width: 1600px;">"From Utility to Amenity: The Evolution of Residential Canals"</h2>
+    <p style="font-size: 22px; color: var(--chawq-fg-2); max-width: 1600px; margin: -8px 0 28px;">
+      C-HAWQ's inaugural peer-reviewed research paper provides the scientific and historical foundation for understanding why Florida's residential canals are failing — and why restoration is both necessary and achievable.
+    </p>
+
+    <div class="two-col">
+      <div>
+        <div style="font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--chawq-sky-900); margin-bottom: 14px;">Key Findings</div>
+        <ul class="dot" style="font-size: 21px; line-height: 1.45;">
+          <li>Florida's residential canals were constructed in the <strong>1950s–70s without modern environmental regulations</strong>, creating deep channels with critically low oxygen levels.</li>
+          <li>Limited flushing causes canal basins to accumulate <strong>fine-grained, organic-rich "muck" sediments</strong> that store nitrogen and phosphorus — a persistent internal pollutant source.</li>
+          <li>Canal degradation affects not just homeowners but <strong>downstream fisheries, public waters, and non-waterfront communities.</strong></li>
+          <li>Because canal degradation is a consequence of design and governance rather than inevitability, it is <strong>at least partially reversible</strong> with targeted, science-based interventions.</li>
+        </ul>
+      </div>
+      <div>
+        <div style="background: var(--chawq-main-blue); color: #fff; padding: 36px 40px; border-radius: 14px;">
+          <div style="font-family: var(--font-mono); font-size: 18px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--chawq-sky); margin-bottom: 16px;">Open Access</div>
+          <p style="font-family: var(--font-display); font-weight: 700; font-size: 30px; line-height: 1.25; color: #fff; margin: 0 0 18px;">
+            All C-HAWQ research is freely available to the public.
+          </p>
+          <p style="font-size: 22px; color: var(--chawq-on-blue-2); line-height: 1.5; margin: 0;">
+            <strong style="color:#fff;">Radical transparency</strong> is a core commitment.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="chrome-page">15 · Research</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     15 — IN PROGRESS + DOCUMENTARY
+============================================================ -->
+<section data-screen-label="33 GIS and Documentary">
+  <div class="slide surface">
+    <div class="eyebrow">15 — Our Latest Research</div>
+    <h2 class="slide-title">In progress & completed media.</h2>
+
+    <div class="two-col">
+      <div style="background: #fff; padding: 36px 40px; border-radius: 14px; border-top: 4px solid var(--chawq-sky);">
+        <div style="font-family: var(--font-mono); font-size: 18px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--chawq-sky-900); margin-bottom: 14px;">In Progress</div>
+        <h3 style="font-family: var(--font-display); font-weight: 800; font-size: 30px; color: var(--chawq-main-blue); margin: 0 0 16px; line-height: 1.15;">Residential Canal GIS Mapping Project — Statewide</h3>
+        <p style="font-size: 20px; line-height: 1.5; color: var(--chawq-fg-1); margin: 0 0 20px;">
+          C-HAWQ has mapped <strong>over 75% of Florida municipalities'</strong> residential canal systems in GIS — the most comprehensive statewide canal dataset ever assembled. Static maps are generated on demand and shared with municipalities at initial meetings. Interactive web layers are in development for free municipal self-service access.
+        </p>
+        <div style="background: var(--chawq-main-blue-050); padding: 20px 24px; border-radius: 10px;">
+          <div style="font-family: var(--font-mono); font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--chawq-sky-900); margin-bottom: 10px;">Example — Marco Island</div>
+          <div style="font-family: var(--font-mono); font-size: 18px; color: var(--chawq-fg-1); line-height: 1.6;">
+            Total canal area &nbsp; <strong>4,015,158 m²</strong><br>
+            Canal coverage &nbsp; <strong>13.59% of landmass</strong>
+          </div>
+          <div style="margin-top: 14px; font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--chawq-sky-900); border-top: 1px dashed var(--chawq-sky-700); padding-top: 12px;">Designer: insert Marco Island GIS map (compressed JPG)</div>
+        </div>
+      </div>
+      <div style="background: #fff; padding: 36px 40px; border-radius: 14px; border-top: 4px solid var(--chawq-green);">
+        <div style="font-family: var(--font-mono); font-size: 18px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--chawq-green); margin-bottom: 14px;">Completed</div>
+        <h3 style="font-family: var(--font-display); font-weight: 800; font-size: 30px; color: var(--chawq-main-blue); margin: 0 0 16px; line-height: 1.15;">Canal History Documentary</h3>
+        <p style="font-size: 20px; line-height: 1.5; color: var(--chawq-fg-1); margin: 0;">
+          C-HAWQ has completed its inaugural documentary tracing the history of Florida's residential canal systems — from the <strong>speculative land booms of the mid-20th century</strong> to the water quality crisis of today.
+        </p>
+        <p style="font-size: 20px; line-height: 1.5; color: var(--chawq-fg-1); margin: 18px 0 0;">
+          This documentary will serve as a cornerstone of C-HAWQ's <strong>community outreach and conference presence.</strong>
+        </p>
+      </div>
+    </div>
+    <div class="chrome-page">15 · Research</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     16 — AI STATEMENT
+============================================================ -->
+<section data-screen-label="34 AI Statement">
+  <div class="slide blue">
+    <div class="section-mark"><span class="num">16</span><span class="title-text">Artificial Intelligence at C-HAWQ</span></div>
+    <h2 class="slide-title">A force multiplier — not the hand that builds.</h2>
+
+    <p style="font-family: var(--font-display); font-weight: 500; font-size: 32px; line-height: 1.4; color: var(--chawq-on-blue-2); max-width: 1600px; margin-bottom: 36px;">
+      C-HAWQ views Artificial Intelligence not as a replacement for scientific rigor, but as a <strong style="color:#fff;">force multiplier for our mission.</strong> While AI helps us find opportunities and automate workflows, our team members read the research, understand the dynamics in the room, and execute the final output. <strong style="color: #fff;">The AI is a tool in our belt — not the hand that builds the project.</strong>
+    </p>
+
+    <div style="margin-top: auto; padding-top: 40px; border-top: 1px solid rgba(255,255,255,0.2);">
+      <p style="font-size: 24px; color: var(--chawq-on-blue-2); max-width: 1700px; margin: 0;">
+        Our AI infrastructure platform is under active development. It integrates deep research, sales coordination, administrative workflows, and team preparation for municipal engagements into a single intelligent system.
+      </p>
+    </div>
+    <div class="chrome-page">16 · AI</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     16 — AI — FOUR CATEGORIES
+============================================================ -->
+<section data-screen-label="35 AI Categories">
+  <div class="slide">
+    <div class="eyebrow">16 — Artificial Intelligence at C-HAWQ</div>
+    <h2 class="slide-title">Where AI multiplies our capacity.</h2>
+
+    <div class="four-col">
+      <div class="num-card">
+        <div class="n">01</div>
+        <h4>Faster, Deeper Research</h4>
+        <p>Before every meeting, our AI has already performed a deep dive on the people, places, and projects involved — scanning years of municipal records and regulations in seconds.</p>
+      </div>
+      <div class="num-card">
+        <div class="n">02</div>
+        <h4>Operational Sales Efficiency</h4>
+        <p>Our AI synthesizes meeting recordings, team debriefs, and conference networking into insights and next-step strategies — keeping leadership focused on municipalities.</p>
+      </div>
+      <div class="num-card">
+        <div class="n">03</div>
+        <h4>Visual Storytelling at Scale</h4>
+        <p>We use AI to transform complex engineering and scientific concepts into high-fidelity renders — showing exactly what a restored canal or habitat island will look like.</p>
+      </div>
+      <div class="num-card">
+        <div class="n">04</div>
+        <h4>Municipal Champion Toolkit</h4>
+        <p>AI-assisted frameworks help City Managers navigate Florida statutes and the P3 model, providing the technical horsepower needed to move projects from concept to execution.</p>
+      </div>
+    </div>
+    <div class="chrome-page">16 · AI</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     17 — FINANCIALS: STATEMENT OF ACTIVITY
+============================================================ -->
+<section data-screen-label="36 Financials Statement">
+  <div class="slide">
+    <div class="section-mark"><span class="num">17</span><span class="title-text">Financials</span></div>
+    <h2 class="slide-title">Statement of Activity</h2>
+    <p style="font-family: var(--font-mono); font-size: 20px; color: var(--chawq-fg-3); letter-spacing: 0.08em; margin: -20px 0 32px; text-transform: uppercase;">
+      Period: August 7, 2025 — May 3, 2026 &nbsp;·&nbsp; Inception to Date
+    </p>
+
+    <div class="stats">
+      <div class="stat" style="color: var(--chawq-main-blue);">
+        <div class="num" style="color: var(--chawq-main-blue);">$870K</div>
+        <div class="lbl" style="color: var(--chawq-fg-2);">Total Revenue</div>
+      </div>
+      <div class="stat" style="color: var(--chawq-main-blue);">
+        <div class="num" style="color: var(--chawq-main-blue);">$821K</div>
+        <div class="lbl" style="color: var(--chawq-fg-2);">Total Expenditures</div>
+      </div>
+      <div class="stat" style="color: var(--chawq-green);">
+        <div class="num" style="color: var(--chawq-green);">$48,785</div>
+        <div class="lbl" style="color: var(--chawq-fg-2);">Net Positive Balance</div>
+      </div>
+      <div class="stat" style="color: var(--chawq-main-blue);">
+        <div class="num" style="color: var(--chawq-main-blue);"><9<span style="font-size:0.55em;"> Mo.</span></div>
+        <div class="lbl" style="color: var(--chawq-fg-2);">Operating Period</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 56px; padding: 28px 36px; background: var(--chawq-main-blue-050); border-left: 4px solid var(--chawq-sky); border-radius: 0 14px 14px 0;">
+      <p style="font-family: var(--font-display); font-weight: 600; font-size: 26px; line-height: 1.4; color: var(--chawq-main-blue); margin: 0;">
+        C-HAWQ operates with a <strong>"Software-over-Staffing"</strong> philosophy — investing in technology and AI infrastructure that dramatically expands capacity without proportional headcount increases.
+      </p>
+      <p style="font-size: 22px; color: var(--chawq-fg-2); margin: 14px 0 0;">
+        100% of income to date has come from individual donors.
+      </p>
+    </div>
+    <div class="chrome-page">17 · Financials</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     17 — EXPENSE BREAKDOWN
+============================================================ -->
+<section data-screen-label="37 Expense Breakdown">
+  <div class="slide">
+    <div class="eyebrow">17 — Financials</div>
+    <h2 class="slide-title">Expense Breakdown</h2>
+    <p style="font-size: 22px; color: var(--chawq-fg-2); max-width: 1600px; margin: -16px 0 24px;">
+      The largest investments directly reflect our mission: <strong style="color: var(--chawq-main-blue);">people doing the work, science advancing the research, and conference presence building the relationships</strong> that move projects forward.
+    </p>
+
+    <div style="margin-top: 16px;">
+      <div class="expense-row row-1">
+        <div class="cat">Payroll & People</div>
+        <div class="amt">$381,812</div>
+        <div class="pct">46.5%</div>
+        <div class="bar"><span style="width: 46.5%;"></span></div>
+      </div>
+      <div class="expense-row row-2">
+        <div class="cat">Science & Professional</div>
+        <div class="amt">$186,600</div>
+        <div class="pct">22.7%</div>
+        <div class="bar"><span style="width: 22.7%;"></span></div>
+      </div>
+      <div class="expense-row row-3">
+        <div class="cat">Marketing & Conferences</div>
+        <div class="amt">$101,784</div>
+        <div class="pct">12.4%</div>
+        <div class="bar"><span style="width: 12.4%;"></span></div>
+      </div>
+      <div class="expense-row row-4">
+        <div class="cat">Office & Technology</div>
+        <div class="amt">$83,113</div>
+        <div class="pct">10.1%</div>
+        <div class="bar"><span style="width: 10.1%;"></span></div>
+      </div>
+      <div class="expense-row row-5">
+        <div class="cat">Travel, Field & Supplies</div>
+        <div class="amt">$56,641</div>
+        <div class="pct">6.9%</div>
+        <div class="bar"><span style="width: 6.9%;"></span></div>
+      </div>
+      <div class="expense-row row-6">
+        <div class="cat">Other</div>
+        <div class="amt">$9,265</div>
+        <div class="pct">1.1%</div>
+        <div class="bar"><span style="width: 1.1%;"></span></div>
+      </div>
+    </div>
+
+    <p style="font-size: 20px; color: var(--chawq-fg-3); margin: 30px 0 0; max-width: 1700px; line-height: 1.45;">
+      <strong style="color: var(--chawq-main-blue);">Transparency Commitment.</strong> C-HAWQ is implementing a formal expense allocation framework. Program, management, and fundraising breakdowns will be published in our first annual report.
+    </p>
+    <div class="chrome-page">17 · Expenses</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     18 — WAYS TO SUPPORT — FINANCIAL
+============================================================ -->
+<section data-screen-label="38 Ways to Support Financial">
+  <div class="slide">
+    <div class="section-mark"><span class="num">18</span><span class="title-text">Ways to Support C-HAWQ</span></div>
+    <h2 class="slide-title">Financial Support</h2>
+
+    <div class="two-col-wide" style="gap: 64px; align-items: start;">
+      <div class="body">
+        <p>Your tax-deductible gift directly funds the exploration, science, and community outreach that makes restoration possible.</p>
+        <p>Florida lists <strong style="color: var(--chawq-main-blue);">2,201 impaired bodies of water</strong>. Most coastal communities know they have a problem — few have the scientific resources to prove what's causing it or what will fix it.</p>
+        <p style="font-family: var(--font-display); font-weight: 700; font-size: 32px; color: var(--chawq-main-blue); line-height: 1.25; margin-top: 24px;">
+          C-HAWQ fills that gap.
+        </p>
+        <div class="ph-box" style="margin-top: 28px; width: 200px; height: 200px;">
+          <div class="tag">QR Code</div>
+          <div class="txt">CHAWQ.org<br>/donate</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--chawq-sky-900); margin-bottom: 18px;">How to Give</div>
+        <div style="display: flex; flex-direction: column; gap: 18px;">
+          <div style="background: var(--chawq-surface-1); padding: 22px 28px; border-radius: 12px; border-left: 4px solid var(--chawq-sky);">
+            <div style="font-family: var(--font-display); font-weight: 700; font-size: 22px; color: var(--chawq-main-blue); margin-bottom: 6px;">Online</div>
+            <div style="font-size: 20px; color: var(--chawq-fg-1);"><strong>CHAWQ.org/donate</strong> — one-time, monthly, quarterly, and annual gifts</div>
+          </div>
+          <div style="background: var(--chawq-surface-1); padding: 22px 28px; border-radius: 12px; border-left: 4px solid var(--chawq-sky);">
+            <div style="font-family: var(--font-display); font-weight: 700; font-size: 22px; color: var(--chawq-main-blue); margin-bottom: 6px;">Check</div>
+            <div style="font-size: 20px; color: var(--chawq-fg-1);">Payable to <strong>"Coastal Habitat and Water Quality Initiative Corp."</strong><br>3375 Tamiami Trl E #100, Naples, FL 34112</div>
+          </div>
+          <div style="background: var(--chawq-surface-1); padding: 22px 28px; border-radius: 12px; border-left: 4px solid var(--chawq-sky);">
+            <div style="font-family: var(--font-display); font-weight: 700; font-size: 22px; color: var(--chawq-main-blue); margin-bottom: 6px;">Wire Transfer</div>
+            <div style="font-size: 20px; color: var(--chawq-fg-1);">Contact <strong>emily@chawq.org</strong> for secure wire instructions. Account details provided directly upon request.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p style="font-size: 15px; color: var(--chawq-fg-3); margin-top: 26px; max-width: 1700px; line-height: 1.45;">
+      C-HAWQ is a 501(c)(3) public charity. Reg. #CH83290. All contributions are fully tax-deductible. No goods or services are provided in exchange for donations. A copy of the official registration and financial information may be obtained from the Division of Consumer Services by calling 1-800-HELP-FLA (435-7352). Registration does not imply endorsement by the State.
+    </p>
+    <div class="chrome-page">18 · Support</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     18 — BEYOND THE GIFT
+============================================================ -->
+<section data-screen-label="39 Beyond the Gift">
+  <div class="slide surface">
+    <div class="eyebrow">18 — Ways to Support C-HAWQ</div>
+    <h2 class="slide-title">Beyond the Gift</h2>
+    <p style="font-size: 24px; color: var(--chawq-fg-2); max-width: 1600px; margin: -16px 0 32px;">
+      Financial support is one way to advance this mission. <strong style="color: var(--chawq-main-blue);">Some of the most valuable contributions we receive are not monetary.</strong>
+    </p>
+
+    <div class="four-col">
+      <div class="num-card">
+        <div class="n">→</div>
+        <h4>Share Our Organization</h4>
+        <p>If C-HAWQ's mission connects with someone in your network — a neighbor, a colleague, a community leader — a personal introduction is more powerful than any marketing we could do.</p>
+      </div>
+      <div class="num-card">
+        <div class="n">→</div>
+        <h4>Connect Us to Government Experience</h4>
+        <p>Introductions to current or former government officials — city managers, county commissioners, agency directors, legislative staff — are invaluable as we navigate municipal bureaucracy and public-private partnership law in real time.</p>
+      </div>
+      <div class="num-card">
+        <div class="n">→</div>
+        <h4>Introduce Us to Aligned NGOs</h4>
+        <p>If you know a land trust, a watershed alliance, a water utility foundation, or a national environmental organization that should know about C-HAWQ, we welcome that connection.</p>
+      </div>
+      <div class="num-card">
+        <div class="n">→</div>
+        <h4>Attend a Conference With Us</h4>
+        <p>Our booth is the best way to see C-HAWQ in action. If you are attending any conference listed in this binder, let us know.</p>
+      </div>
+    </div>
+    <div class="chrome-page">18 · Support</div>
+    <img class="chrome-logo" src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="">
+  </div>
+</section>
+
+<!-- ============================================================
+     CLOSING / THANK YOU
+============================================================ -->
+<section data-screen-label="40 Thank You">
+  <div class="slide cover">
+    <div class="cover-photo" style="background: linear-gradient(135deg, var(--chawq-main-blue-900) 0%, var(--chawq-main-blue) 100%)"></div>
+    <div class="cover-gradient" style="background: linear-gradient(180deg, rgba(20,39,73,0.65) 0%, rgba(20,39,73,0.92) 70%, var(--chawq-main-blue-900) 100%);"></div>
+    <div class="cover-inner closing-content">
+      <img src="https://raw.githubusercontent.com/C-HAWQ/Website-images/Main/logos/White%20%20blue%20background%20symbol%20c-hawq.png" alt="C-HAWQ" style="width: 140px; height: 140px;">
+      <h1>Thank you.</h1>
+      <div class="sub" style="max-width: 1300px;">Every dollar, every introduction, every conversation moves Florida's waterways closer to restoration.</div>
+      <div style="display: flex; flex-direction: column; gap: 14px; align-items: center; margin-top: 24px;">
+        <div style="font-family: var(--font-display); font-weight: 700; font-size: 26px; color: #fff;">Coastal Habitat and Water Quality Initiative</div>
+        <div class="contact-line">3375 Tamiami Trl E #100 &nbsp;·&nbsp; Naples, FL 34112</div>
+        <div class="contact-line">CHAWQ.org</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</deck-stage>`;
+
+const parser = new DOMParser();
+const doc = parser.parseFromString('<div>' + SECTIONS_RAW + '</div>', 'text/html');
+const sections = Array.from(doc.querySelectorAll('section[data-screen-label]'));
+const labels = sections.map(s => s.getAttribute('data-screen-label'));
+const htmlSlides = sections.map(s => s.outerHTML);
+
+let currentSlide = 0;
+let scaleFactor = 1;
+
+// Build TOC
+const tocGrid = document.getElementById('toc-grid');
+labels.forEach((label, i) => {
+  const div = document.createElement('div');
+  div.className = 'ftoc-item';
+  const parts = label.match(/^(\d+)\s(.+)$/);
+  div.innerHTML = parts
+    ? `<span class="ftoc-num">${parts[1]}</span><span class="ftoc-name">${parts[2]}</span>`
+    : `<span class="ftoc-name">${label}</span>`;
+  div.onclick = () => { goToSlide(i); closeToc(); };
+  tocGrid.appendChild(div);
+});
+
+function getScaleFactor() {
+  const stage = document.getElementById('stage');
+  return Math.min(stage.clientWidth / 1920, stage.clientHeight / 1080);
+}
+
+function renderSlide(index) {
+  const frame = document.getElementById('current-frame');
+  frame.innerHTML = htmlSlides[index];
+  scaleFactor = getScaleFactor();
+  frame.style.transform = `scale(${scaleFactor})`;
+  frame.style.setProperty('--sf', scaleFactor);
+  frame.classList.remove('entering');
+  void frame.offsetWidth;
+  frame.classList.add('entering');
+  frame.addEventListener('animationend', () => frame.classList.remove('entering'), {once:true});
+
+  document.getElementById('slide-counter').textContent = `${index+1} / ${htmlSlides.length}`;
+  const label = labels[index];
+  const parts = label.match(/^\d+\s(.+)$/);
+  document.getElementById('slide-label').textContent = parts ? parts[1] : label;
+  document.getElementById('progress').style.width = (((index+1) / htmlSlides.length) * 100) + '%';
+}
+
+function goToSlide(i) {
+  if (i < 0 || i >= htmlSlides.length) return;
+  currentSlide = i;
+  renderSlide(i);
+}
+function nextSlide() { goToSlide(currentSlide + 1); }
+function prevSlide() { goToSlide(currentSlide - 1); }
+function toggleToc() { document.getElementById('toc-overlay').classList.toggle('open'); }
+function closeToc() { document.getElementById('toc-overlay').classList.remove('open'); }
+function toggleFullscreen() {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+  if (e.key === 'Escape') closeToc();
+  if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+  if (e.key === 't' || e.key === 'T') toggleToc();
+  if (e.key === 'Home') goToSlide(0);
+  if (e.key === 'End') goToSlide(htmlSlides.length - 1);
+});
+
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, {passive:true});
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 50) dx < 0 ? nextSlide() : prevSlide();
+});
+
+window.addEventListener('resize', () => renderSlide(currentSlide));
+
+renderSlide(0);
+</script>
+</body>
+</html>
